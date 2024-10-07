@@ -868,7 +868,7 @@ void collectRawFr(UNIT *unit)
       for(int i=0; i<TBUF; i++)
 	{
 	  nbval++;
-	  fprintf(fi,"ADC_A,ADC_B,timestamp,count");
+	  fprintf(fi,"ADC_A,ADC_B");
 	  for (int j = 0; j < unit->channelCount; j++)
 	    {
 	      fprintf(fi,",%6d",
