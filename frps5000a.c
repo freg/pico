@@ -23,6 +23,7 @@
 #ifndef PICO_STATUS
 #include <libps5000a/PicoStatus.h>
 #endif
+#include <math.h>
 
 #define Sleep(a) usleep(1000*a)
 #define memcpy_s(a,b,c,d) memcpy(a,c,d)
@@ -44,6 +45,9 @@ int32_t cycles = 0;
 
 #define MAX_PICO_DEVICES 64
 #define TIMED_LOOP_STEP 500
+
+#define TBUF 6000
+#define NBPAGES 1000
 
 typedef struct
 {
@@ -298,90 +302,90 @@ PICO_STATUS clearDataBuffers(UNIT * unit)
 ****************************************************************************/
 void set_info(UNIT * unit)
 {
-	int8_t description [11][25]= { "Driver Version",
-		"USB Version",
-		"Hardware Version",
-		"Variant Info",
-		"Serial",
-		"Cal Date",
-		"Kernel Version",
-		"Digital HW Version",
-		"Analogue HW Version",
-		"Firmware 1",
-		"Firmware 2"};
+  int8_t description [11][25]= { "Driver Version",
+				 "USB Version",
+				 "Hardware Version",
+				 "Variant Info",
+				 "Serial",
+				 "Cal Date",
+				 "Kernel Version",
+				 "Digital HW Version",
+				 "Analogue HW Version",
+				 "Firmware 1",
+				 "Firmware 2"};
 
-	int16_t i = 0;
-	int16_t requiredSize = 0;
-	int8_t line [80];
-	int32_t variant;
-	PICO_STATUS status = PICO_OK;
-
-	// Variables used for arbitrary waveform parameters
-	int16_t			minArbitraryWaveformValue = 0;
-	int16_t			maxArbitraryWaveformValue = 0;
-	uint32_t		minArbitraryWaveformSize = 0;
-	uint32_t		maxArbitraryWaveformSize = 0;
-
-	//Initialise default unit properties and change when required
-	unit->sigGen = SIGGEN_FUNCTGEN;
-	unit->firstRange = PS5000A_10MV;
-	unit->lastRange = PS5000A_20V;
-	unit->channelCount = DUAL_SCOPE;
-	unit->awgBufferSize = MIN_SIG_GEN_BUFFER_SIZE;
-	unit->digitalPortCount = 0;
-
-	if (unit->handle) 
+  int16_t i = 0;
+  int16_t requiredSize = 0;
+  int8_t line [80];
+  int32_t variant;
+  PICO_STATUS status = PICO_OK;
+  
+  // Variables used for arbitrary waveform parameters
+  int16_t			minArbitraryWaveformValue = 0;
+  int16_t			maxArbitraryWaveformValue = 0;
+  uint32_t		minArbitraryWaveformSize = 0;
+  uint32_t		maxArbitraryWaveformSize = 0;
+  
+  //Initialise default unit properties and change when required
+  unit->sigGen = SIGGEN_FUNCTGEN;
+  unit->firstRange = PS5000A_10MV;
+  unit->lastRange = PS5000A_20V;
+  unit->channelCount = DUAL_SCOPE;
+  unit->awgBufferSize = MIN_SIG_GEN_BUFFER_SIZE;
+  unit->digitalPortCount = 0;
+  
+  if (unit->handle) 
+    {
+      printf("Device information:-\n\n");
+      
+      for (i = 0; i < 11; i++) 
 	{
-		printf("Device information:-\n\n");
-
-		for (i = 0; i < 11; i++) 
+	  status = ps5000aGetUnitInfo(unit->handle, line, sizeof (line), &requiredSize, i);
+	  
+	  // info = 3 - PICO_VARIANT_INFO
+	  if (i == PICO_VARIANT_INFO) 
+	    {
+	      variant = atoi(line);
+	      memcpy(&(unit->modelString), line, sizeof(unit->modelString)==5?5:sizeof(unit->modelString));
+	      
+	      unit->channelCount = (int16_t)line[1];
+	      unit->channelCount = unit->channelCount - 48; // Subtract ASCII 0 (48)
+	      
+	      // Determine if the device is an MSO
+	      if (strstr(line, "MSO") != NULL)
 		{
-			status = ps5000aGetUnitInfo(unit->handle, line, sizeof (line), &requiredSize, i);
-
-			// info = 3 - PICO_VARIANT_INFO
-			if (i == PICO_VARIANT_INFO) 
-			{
-				variant = atoi(line);
-				memcpy(&(unit->modelString), line, sizeof(unit->modelString)==5?5:sizeof(unit->modelString));
-
-				unit->channelCount = (int16_t)line[1];
-				unit->channelCount = unit->channelCount - 48; // Subtract ASCII 0 (48)
-
-				// Determine if the device is an MSO
-				if (strstr(line, "MSO") != NULL)
-				{
-					unit->digitalPortCount = 2;
-				}
-				else
-				{
-					unit->digitalPortCount = 0;
-				}
-				
-			}
-			else if (i == PICO_BATCH_AND_SERIAL)	// info = 4 - PICO_BATCH_AND_SERIAL
-			{
-				memcpy(&(unit->serial), line, requiredSize);
-			}
-
-			printf("%s: %s\n", description[i], line);
+		  unit->digitalPortCount = 2;
 		}
-
-		printf("\n");
-
-		// Set sig gen parameters
-		// If device has Arbitrary Waveform Generator, find the maximum AWG buffer size
-		status = ps5000aSigGenArbitraryMinMaxValues(unit->handle, &minArbitraryWaveformValue, &maxArbitraryWaveformValue, &minArbitraryWaveformSize, &maxArbitraryWaveformSize);
-		unit->awgBufferSize = maxArbitraryWaveformSize;
-
-		if (unit->awgBufferSize > 0)
+	      else
 		{
-			unit->sigGen = SIGGEN_AWG;
+		  unit->digitalPortCount = 0;
 		}
-		else
-		{
-			unit->sigGen = SIGGEN_FUNCTGEN;
-		}
+	      
+	    }
+	  else if (i == PICO_BATCH_AND_SERIAL)	// info = 4 - PICO_BATCH_AND_SERIAL
+	    {
+	      memcpy(&(unit->serial), line, requiredSize);
+	    }
+	  
+	  printf("%s: %s\n", description[i], line);
 	}
+      
+      printf("\n");
+      
+      // Set sig gen parameters
+      // If device has Arbitrary Waveform Generator, find the maximum AWG buffer size
+      status = ps5000aSigGenArbitraryMinMaxValues(unit->handle, &minArbitraryWaveformValue, &maxArbitraryWaveformValue, &minArbitraryWaveformSize, &maxArbitraryWaveformSize);
+      unit->awgBufferSize = maxArbitraryWaveformSize;
+      
+      if (unit->awgBufferSize > 0)
+	{
+	  unit->sigGen = SIGGEN_AWG;
+	}
+      else
+	{
+	  unit->sigGen = SIGGEN_FUNCTGEN;
+	}
+    }
 }
 
 /****************************************************************************
@@ -599,28 +603,31 @@ double GetTimeStamp(void)
   clock_gettime(CLOCK_REALTIME, &start);
   return 1e9 * start.tv_sec + start.tv_nsec;        // return ns time stamp
 }
-void collectRawFr(UNIT *unit)
+void collectRawFr(UNIT *unit, int taille, int npages)
 {
   int16_t status, over=0;
   int32_t no=1;
   int16_t * buffers[2 * PS5000A_MAX_CHANNELS];
-  #define TBUF 6000
-  #define NBPAGES 1000
+  
   FILE * fi;
   double debut, fin, result, sec, hz ;
+  int cpt=0;
   fi = fopen("data.txt", "a");
   printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", TBUF, NBPAGES);
   ps5000aStop(unit->handle);
-  ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A, &buffers, TBUF, 1, 0);
+  printf("%d\n",cpt++);
+  ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A, &buffers, taille, 1, 0);
+  printf("%d\n",cpt++);
   debut = GetTimeStamp();
   int nbval=0;
-  for (int ib=0; ib<NBPAGES; ib++)
+  for (int ib=0; ib<npages; ib++)
     {
-      status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, TBUF, &over);
-
-      for(int i=0; i<TBUF; i++)
+      status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, taille, &over);
+      
+      for(int i=0; i<taille; i++)
 	{
 	  nbval++;
+	  //printf("page %d, pbuf %d %d\n",ib,i,cpt++);
 	  fprintf(fi,"ADC_A,ADC_B");
 	  for (int j = 0; j < unit->channelCount; j++)
 	    {
@@ -636,8 +643,8 @@ void collectRawFr(UNIT *unit)
   result = fin - debut ;
   sec = result / 1e9;
   hz = sec ? nbval/sec:1;
-  printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz \n",
-	 nbval, debut, fin, result, sec, hz);
+  printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz %2f MHz\n",
+	 nbval, debut, fin, result, sec, hz, (float)round(hz/1e4)/1e2);
 }
 /****************************************************************************
 * mainMenu
@@ -647,13 +654,13 @@ void collectRawFr(UNIT *unit)
 *
 * Returns       none
 ***************************************************************************/
-void mainMenu(UNIT *unit)
+void mainMenu(UNIT *unit, int nbuf, int npages)
 {
 	int8_t ch = '.';
 	PICO_STATUS status = ps5000aSetDeviceResolution(unit->handle, (PS5000A_DEVICE_RESOLUTION)PS5000A_DR_16BIT);
 	displaySettings(unit);
 	printf("\n\n");
-	collectRawFr(unit);
+	collectRawFr(unit, nbuf, npages);
 }
 
 
@@ -661,65 +668,55 @@ void mainMenu(UNIT *unit)
 * main
 *
 ***************************************************************************/
-int32_t main(void)
+int32_t main(int nba, char**args, char**env)
 {
-	int8_t ch;
-	uint16_t devCount = 0, listIter = 0,	openIter = 0;
-	//device indexer -  64 chars - 64 is maximum number of picoscope devices handled by driver
-	int8_t devChars[] =
-			"1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#";
-	PICO_STATUS status = PICO_OK;
-	UNIT allUnits[MAX_PICO_DEVICES];
+  int8_t ch;
+  uint16_t devCount = 0, listIter = 0,	openIter = 0;
+  //device indexer -  64 chars - 64 is maximum number of picoscope devices handled by driver
+  int8_t devChars[] =
+    "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#";
+  PICO_STATUS status = PICO_OK;
+  UNIT Unit;
+  int nbuf = TBUF, npages = NBPAGES;
+  printf("PicoScope 5000 Series (ps5000a) Driver Example Program\n");
+  printf("%s nba:%d args: %s\n",args[0],nba,args[1]);
+  if (nba>0)
+    {
+      for (int ia=1;ia<nba;ia++)
+	if (args[ia][0] == '-')
+	  {
+	    switch(args[ia][1])
+	      {
+	      case 'n': // taille de la page/buffer
+		nbuf=atoi(args[ia+1]);
+		break;
+	      case 'p': // nombre de pages
+		npages = atoi(args[ia+1]);
+		break;
+	      default:
+		printf("%s usage:\n\t-n <taille du buffer>\n\t-p <nombre de pages>\n", *args[0]);
+		break;
+	      }
+	  }
+    }
+  status = openDevice(&Unit, NULL);
+  if (status == PICO_NOT_FOUND)
+    {
+      printf("Picoscope devices not found\n");
+      return 1;
+    }
 
-	printf("PicoScope 5000 Series (ps5000a) Driver Example Program\n");
-	printf("\nEnumerating Units...\n");
+  Unit.openStatus = (int16_t)changePowerSource(Unit.handle, Unit.openStatus, &Unit);
+  set_info(&Unit);
+  status = handleDevice(&Unit);
+  if (status != PICO_OK)
+    {
+      printf("Picoscope devices open failed, error code 0x%x\n",(uint32_t)status);
+      return 1;
+    }
 
-	do
-	{
-		status = openDevice(&(allUnits[devCount]), NULL);
-		
-		if (status == PICO_OK || status == PICO_POWER_SUPPLY_NOT_CONNECTED 
-					|| status == PICO_USB3_0_DEVICE_NON_USB3_0_PORT)
-		{
-			allUnits[devCount++].openStatus = (int16_t) status;
-		}
-
-	} while(status != PICO_NOT_FOUND);
-
-	if (devCount == 0)
-	{
-		printf("Picoscope devices not found\n");
-		return 1;
-	}
-
-	// if there is only one device, open and handle it here
-	if (devCount == 1)
-	{
-		printf("Found one device, opening...\n\n");
-		status = allUnits[0].openStatus;
-
-		if (status == PICO_OK || status == PICO_POWER_SUPPLY_NOT_CONNECTED
-					|| status == PICO_USB3_0_DEVICE_NON_USB3_0_PORT)
-		{
-			if (allUnits[0].openStatus == PICO_POWER_SUPPLY_NOT_CONNECTED || allUnits[0].openStatus == PICO_USB3_0_DEVICE_NON_USB3_0_PORT)
-			{
-				allUnits[0].openStatus = (int16_t)changePowerSource(allUnits[0].handle, allUnits[0].openStatus, &allUnits[0]);
-			}
-
-			set_info(&allUnits[0]);
-			status = handleDevice(&allUnits[0]);
-		}
-
-		if (status != PICO_OK)
-		{
-			printf("Picoscope devices open failed, error code 0x%x\n",(uint32_t)status);
-			return 1;
-		}
-
-		mainMenu(&allUnits[0]);
-		closeDevice(&allUnits[0]);
-		printf("Exit...\n");
-		return 0;
-	}
-	return 0;
+  mainMenu(&Unit, nbuf, npages);
+  closeDevice(&Unit);
+  printf("Exit...\n");
+  return 0;
 }
