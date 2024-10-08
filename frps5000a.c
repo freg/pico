@@ -60,84 +60,84 @@ int32_t cycles = 0;
 
 typedef struct
 {
-	int16_t DCcoupled;
-	int16_t range;
-	int16_t enabled;
-	float analogueOffset;
+  int16_t DCcoupled;
+  int16_t range;
+  int16_t enabled;
+  float analogueOffset;
 }CHANNEL_SETTINGS;
 
 typedef enum
-{
-	MODEL_NONE = 0,
-	MODEL_PS5242A = 0xA242,
-	MODEL_PS5242B = 0xB242,
-	MODEL_PS5243A = 0xA243,
-	MODEL_PS5243B = 0xB243,
-	MODEL_PS5244A = 0xA244,
-	MODEL_PS5244B = 0xB244,
-	MODEL_PS5442A = 0xA442,
-	MODEL_PS5442B = 0xB442,
-	MODEL_PS5443A = 0xA443,
-	MODEL_PS5443B = 0xB443,
-	MODEL_PS5444A = 0xA444,
-	MODEL_PS5444B = 0xB444
-} MODEL_TYPE;
+  {
+    MODEL_NONE = 0,
+    MODEL_PS5242A = 0xA242,
+    MODEL_PS5242B = 0xB242,
+    MODEL_PS5243A = 0xA243,
+    MODEL_PS5243B = 0xB243,
+    MODEL_PS5244A = 0xA244,
+    MODEL_PS5244B = 0xB244,
+    MODEL_PS5442A = 0xA442,
+    MODEL_PS5442B = 0xB442,
+    MODEL_PS5443A = 0xA443,
+    MODEL_PS5443B = 0xB443,
+    MODEL_PS5444A = 0xA444,
+    MODEL_PS5444B = 0xB444
+  } MODEL_TYPE;
 
 typedef enum
-{
-	SIGGEN_NONE = 0,
-	SIGGEN_FUNCTGEN = 1,
-	SIGGEN_AWG = 2
-} SIGGEN_TYPE;
+  {
+    SIGGEN_NONE = 0,
+    SIGGEN_FUNCTGEN = 1,
+    SIGGEN_AWG = 2
+  } SIGGEN_TYPE;
 
 typedef struct tPwq
 {
-	PS5000A_CONDITION * pwqConditions;
-	int16_t nPwqConditions;
-	PS5000A_DIRECTION * pwqDirections;
-	int16_t nPwqDirections;
-	uint32_t lower;
-	uint32_t upper;
-	PS5000A_PULSE_WIDTH_TYPE type;
+  PS5000A_CONDITION * pwqConditions;
+  int16_t nPwqConditions;
+  PS5000A_DIRECTION * pwqDirections;
+  int16_t nPwqDirections;
+  uint32_t lower;
+  uint32_t upper;
+  PS5000A_PULSE_WIDTH_TYPE type;
 }PWQ;
 
 typedef struct
 {
-	int16_t handle;
-	MODEL_TYPE				model;
-	int8_t						modelString[8];
-	int8_t						serial[10];
-	int16_t						complete;
-	int16_t						openStatus;
-	int16_t						openProgress;
-	PS5000A_RANGE			firstRange;
-	PS5000A_RANGE			lastRange;
-	int16_t						channelCount;
-	int16_t						maxADCValue;
-	SIGGEN_TYPE				sigGen;
-	int16_t						hasHardwareETS;
-	uint16_t					awgBufferSize;
-	CHANNEL_SETTINGS	channelSettings [PS5000A_MAX_CHANNELS];
-	PS5000A_DEVICE_RESOLUTION	resolution;
-	int16_t						digitalPortCount;
+  int16_t handle;
+  MODEL_TYPE				model;
+  int8_t						modelString[8];
+  int8_t						serial[10];
+  int16_t						complete;
+  int16_t						openStatus;
+  int16_t						openProgress;
+  PS5000A_RANGE			firstRange;
+  PS5000A_RANGE			lastRange;
+  int16_t						channelCount;
+  int16_t						maxADCValue;
+  SIGGEN_TYPE				sigGen;
+  int16_t						hasHardwareETS;
+  uint16_t					awgBufferSize;
+  CHANNEL_SETTINGS	channelSettings [PS5000A_MAX_CHANNELS];
+  PS5000A_DEVICE_RESOLUTION	resolution;
+  int16_t						digitalPortCount;
 }UNIT;
 
 uint32_t	timebase = 8;
 BOOL			scaleVoltages = TRUE;
 
 uint16_t inputRanges [PS5000A_MAX_RANGES] = {
-												10,
-												20,
-												50,
-												100,
-												200,
-												500,
-												1000,
-												2000,
-												5000,
-												10000,
-												20000,
-												50000};
+  10,
+  20,
+  50,
+  100,
+  200,
+  500,
+  1000,
+  2000,
+  5000,
+  10000,
+  20000,
+  50000};
 
 int16_t			g_autoStopped;
 int16_t   	g_ready = FALSE;
@@ -154,161 +154,161 @@ int8_t streamFile[20] = "stream.txt";
 
 typedef struct tBufferInfo
 {
-	UNIT * unit;
-	int16_t **driverBuffers;
-	int16_t **appBuffers;
+  UNIT * unit;
+  int16_t **driverBuffers;
+  int16_t **appBuffers;
 
 } BUFFER_INFO;
 
 
 /****************************************************************************
-* SetDefaults - restore default settings
-****************************************************************************/
+ * SetDefaults - restore default settings
+ ****************************************************************************/
 void setDefaults(UNIT * unit)
 {
-	PICO_STATUS status;
-	PICO_STATUS powerStatus;
-	int32_t i;
+  PICO_STATUS status;
+  PICO_STATUS powerStatus;
+  int32_t i;
 
-	status = ps5000aSetEts(unit->handle, PS5000A_ETS_OFF, 0, 0, NULL);					// Turn off hasHardwareETS
-	printf(status?"setDefaults:ps5000aSetEts------ 0x%08lx \n":"", status);
+  status = ps5000aSetEts(unit->handle, PS5000A_ETS_OFF, 0, 0, NULL);					// Turn off hasHardwareETS
+  printf(status?"setDefaults:ps5000aSetEts------ 0x%08lx \n":"", status);
 
-	powerStatus = ps5000aCurrentPowerSource(unit->handle);
+  powerStatus = ps5000aCurrentPowerSource(unit->handle);
 
-	for (i = 0; i < unit->channelCount; i++) // reset channels to most recent settings
+  for (i = 0; i < unit->channelCount; i++) // reset channels to most recent settings
+    {
+      if(i >= DUAL_SCOPE && powerStatus == PICO_POWER_SUPPLY_NOT_CONNECTED)
 	{
-		if(i >= DUAL_SCOPE && powerStatus == PICO_POWER_SUPPLY_NOT_CONNECTED)
-		{
-			// No need to set the channels C and D if Quad channel scope and power not enabled.
-		}
-		else
-		{
-			status = ps5000aSetChannel(unit->handle, (PS5000A_CHANNEL)(PS5000A_CHANNEL_A + i),
-				unit->channelSettings[PS5000A_CHANNEL_A + i].enabled,
-				(PS5000A_COUPLING)unit->channelSettings[PS5000A_CHANNEL_A + i].DCcoupled,
-				(PS5000A_RANGE)unit->channelSettings[PS5000A_CHANNEL_A + i].range, 
-				unit->channelSettings[PS5000A_CHANNEL_A + i].analogueOffset);
-
-			printf(status?"SetDefaults:ps5000aSetChannel------ 0x%08lx \n":"", status);
-
-		}
+	  // No need to set the channels C and D if Quad channel scope and power not enabled.
 	}
+      else
+	{
+	  status = ps5000aSetChannel(unit->handle, (PS5000A_CHANNEL)(PS5000A_CHANNEL_A + i),
+				     unit->channelSettings[PS5000A_CHANNEL_A + i].enabled,
+				     (PS5000A_COUPLING)unit->channelSettings[PS5000A_CHANNEL_A + i].DCcoupled,
+				     (PS5000A_RANGE)unit->channelSettings[PS5000A_CHANNEL_A + i].range, 
+				     unit->channelSettings[PS5000A_CHANNEL_A + i].analogueOffset);
+
+	  printf(status?"SetDefaults:ps5000aSetChannel------ 0x%08lx \n":"", status);
+
+	}
+    }
 }
 
 /****************************************************************************
-* adc_to_mv
-*
-* Convert an 16-bit ADC count into millivolts
-****************************************************************************/
+ * adc_to_mv
+ *
+ * Convert an 16-bit ADC count into millivolts
+ ****************************************************************************/
 int32_t adc_to_mv(int32_t raw, int32_t rangeIndex, UNIT * unit)
 {
-	return (raw * inputRanges[rangeIndex]) / unit->maxADCValue;
+  return (raw * inputRanges[rangeIndex]) / unit->maxADCValue;
 }
 
 /****************************************************************************
-* mv_to_adc
-*
-* Convert a millivolt value into a 16-bit ADC count
-*
-*  (useful for setting trigger thresholds)
-****************************************************************************/
+ * mv_to_adc
+ *
+ * Convert a millivolt value into a 16-bit ADC count
+ *
+ *  (useful for setting trigger thresholds)
+ ****************************************************************************/
 int16_t mv_to_adc(int16_t mv, int16_t rangeIndex, UNIT * unit)
 {
-	return (mv * unit->maxADCValue) / inputRanges[rangeIndex];
+  return (mv * unit->maxADCValue) / inputRanges[rangeIndex];
 }
 
 /****************************************************************************************
-* ChangePowerSource - function to handle switches between +5V supply, and USB only power
-* Only applies to PicoScope 544xA/B units 
-******************************************************************************************/
+ * ChangePowerSource - function to handle switches between +5V supply, and USB only power
+ * Only applies to PicoScope 544xA/B units 
+ ******************************************************************************************/
 PICO_STATUS changePowerSource(int16_t handle, PICO_STATUS status, UNIT * unit)
 {
-	int8_t ch;
+  int8_t ch;
 
-	switch (status)
-	{
-		case PICO_POWER_SUPPLY_NOT_CONNECTED:		// User must acknowledge they want to power via USB
-					printf("\nPowering the unit via USB\n");
-					status = ps5000aChangePowerSource(handle, PICO_POWER_SUPPLY_NOT_CONNECTED);		// Tell the driver that's ok
+  switch (status)
+    {
+    case PICO_POWER_SUPPLY_NOT_CONNECTED:		// User must acknowledge they want to power via USB
+      printf("\nPowering the unit via USB\n");
+      status = ps5000aChangePowerSource(handle, PICO_POWER_SUPPLY_NOT_CONNECTED);		// Tell the driver that's ok
 				
-					if(status == PICO_OK && unit->channelCount == QUAD_SCOPE)
-					{
-						unit->channelSettings[PS5000A_CHANNEL_C].enabled = FALSE;
-						unit->channelSettings[PS5000A_CHANNEL_D].enabled = FALSE;
-					}
-					else if (status == PICO_POWER_SUPPLY_UNDERVOLTAGE)
-					{
-						status = changePowerSource(handle, status, unit);
-					}
-					else
-					{
-						// Do nothing
-					}
+      if(status == PICO_OK && unit->channelCount == QUAD_SCOPE)
+	{
+	  unit->channelSettings[PS5000A_CHANNEL_C].enabled = FALSE;
+	  unit->channelSettings[PS5000A_CHANNEL_D].enabled = FALSE;
+	}
+      else if (status == PICO_POWER_SUPPLY_UNDERVOLTAGE)
+	{
+	  status = changePowerSource(handle, status, unit);
+	}
+      else
+	{
+	  // Do nothing
+	}
 
 
 
-			break;
+      break;
 
-		case PICO_POWER_SUPPLY_CONNECTED:
-			printf("\nUsing +5 V power supply voltage.\n");
-			status = ps5000aChangePowerSource(handle, PICO_POWER_SUPPLY_CONNECTED);		// Tell the driver we are powered from +5V supply
-			break;
+    case PICO_POWER_SUPPLY_CONNECTED:
+      printf("\nUsing +5 V power supply voltage.\n");
+      status = ps5000aChangePowerSource(handle, PICO_POWER_SUPPLY_CONNECTED);		// Tell the driver we are powered from +5V supply
+      break;
 
-		case PICO_USB3_0_DEVICE_NON_USB3_0_PORT:
+    case PICO_USB3_0_DEVICE_NON_USB3_0_PORT:
 			
 		  
-		  printf("\nSwitching to use USB power from non-USB 3.0 port.\n");
-		  status = ps5000aChangePowerSource(handle, PICO_USB3_0_DEVICE_NON_USB3_0_PORT);		// Tell the driver that's ok
+      printf("\nSwitching to use USB power from non-USB 3.0 port.\n");
+      status = ps5000aChangePowerSource(handle, PICO_USB3_0_DEVICE_NON_USB3_0_PORT);		// Tell the driver that's ok
 		  
-		  if (status == PICO_POWER_SUPPLY_UNDERVOLTAGE)
-		    {
-		      status = changePowerSource(handle, status, unit);
-		    }
-		  else
-		    {
-		      // Do nothing
-		    }
-		  
-		  break;
-
-		case PICO_POWER_SUPPLY_UNDERVOLTAGE:
-		  printf("\nUSB not supplying required voltage");
-		  printf("\nPlease plug in the +5 V power supply\n");
-		  status = ps5000aChangePowerSource(handle, PICO_POWER_SUPPLY_CONNECTED);		// Tell the driver that's ok
-		  break;
+      if (status == PICO_POWER_SUPPLY_UNDERVOLTAGE)
+	{
+	  status = changePowerSource(handle, status, unit);
 	}
+      else
+	{
+	  // Do nothing
+	}
+		  
+      break;
 
-	printf("\n");
-	return status;
+    case PICO_POWER_SUPPLY_UNDERVOLTAGE:
+      printf("\nUSB not supplying required voltage");
+      printf("\nPlease plug in the +5 V power supply\n");
+      status = ps5000aChangePowerSource(handle, PICO_POWER_SUPPLY_CONNECTED);		// Tell the driver that's ok
+      break;
+    }
+
+  printf("\n");
+  return status;
 }
 
 /****************************************************************************
-* ClearDataBuffers
-*
-* stops GetData writing values to memory that has been released
-****************************************************************************/
+ * ClearDataBuffers
+ *
+ * stops GetData writing values to memory that has been released
+ ****************************************************************************/
 PICO_STATUS clearDataBuffers(UNIT * unit)
 {
-	int32_t i;
-	PICO_STATUS status;
+  int32_t i;
+  PICO_STATUS status;
 
-	for (i = 0; i < unit->channelCount; i++) 
+  for (i = 0; i < unit->channelCount; i++) 
+    {
+      if(unit->channelSettings[i].enabled)
 	{
-		if(unit->channelSettings[i].enabled)
-		{
-			if ((status = ps5000aSetDataBuffers(unit->handle, (PS5000A_CHANNEL) i, NULL, NULL, 0, 0, PS5000A_RATIO_MODE_NONE)) != PICO_OK)
-			{
-				printf("clearDataBuffers:ps5000aSetDataBuffers(channel %d) ------ 0x%08lx \n", i, status);
-			}
-		}
+	  if ((status = ps5000aSetDataBuffers(unit->handle, (PS5000A_CHANNEL) i, NULL, NULL, 0, 0, PS5000A_RATIO_MODE_NONE)) != PICO_OK)
+	    {
+	      printf("clearDataBuffers:ps5000aSetDataBuffers(channel %d) ------ 0x%08lx \n", i, status);
+	    }
 	}
-	return status;
+    }
+  return status;
 }
 
 
 /****************************************************************************
-* Initialise unit' structure with Variant specific defaults
-****************************************************************************/
+ * Initialise unit' structure with Variant specific defaults
+ ****************************************************************************/
 void set_info(UNIT * unit)
 {
   int8_t description [11][25]= { "Driver Version",
@@ -398,212 +398,212 @@ void set_info(UNIT * unit)
 }
 
 /****************************************************************************
-* printResolution
-*
-* Outputs the resolution in text format to the console window
-****************************************************************************/
+ * printResolution
+ *
+ * Outputs the resolution in text format to the console window
+ ****************************************************************************/
 void printResolution(PS5000A_DEVICE_RESOLUTION * resolution)
 {
-	switch(*resolution)
-	{
-		case PS5000A_DR_8BIT:
+  switch(*resolution)
+    {
+    case PS5000A_DR_8BIT:
 
-			printf("8 bits");
-			break;
+      printf("8 bits");
+      break;
 
-		case PS5000A_DR_12BIT:
+    case PS5000A_DR_12BIT:
 
-			printf("12 bits");
-			break;
+      printf("12 bits");
+      break;
 
-		case PS5000A_DR_14BIT:
+    case PS5000A_DR_14BIT:
 
-			printf("14 bits");
-			break;
+      printf("14 bits");
+      break;
 
-		case PS5000A_DR_15BIT:
+    case PS5000A_DR_15BIT:
 
-			printf("15 bits");
-			break;
+      printf("15 bits");
+      break;
 
-		case PS5000A_DR_16BIT:
+    case PS5000A_DR_16BIT:
 
-			printf("16 bits");
-			break;
+      printf("16 bits");
+      break;
 
-		default:
+    default:
 
-			break;
-	}
+      break;
+    }
 
-	printf("\n");
+  printf("\n");
 }
 
 
 
 
 /****************************************************************************
-* displaySettings 
-* Displays information about the user configurable settings in this example
-* Parameters 
-* - unit        pointer to the UNIT structure
-*
-* Returns       none
-***************************************************************************/
+ * displaySettings 
+ * Displays information about the user configurable settings in this example
+ * Parameters 
+ * - unit        pointer to the UNIT structure
+ *
+ * Returns       none
+ ***************************************************************************/
 void displaySettings(UNIT *unit)
 {
-	int32_t ch;
-	int32_t voltage;
-	PICO_STATUS status = PICO_OK;
-	PS5000A_DEVICE_RESOLUTION resolution = PS5000A_DR_8BIT;
+  int32_t ch;
+  int32_t voltage;
+  PICO_STATUS status = PICO_OK;
+  PS5000A_DEVICE_RESOLUTION resolution = PS5000A_DR_8BIT;
 
-	printf("\nReadings will be scaled in %s\n", (scaleVoltages)? ("millivolts") : ("ADC counts"));
-	printf("\n");
+  printf("\nReadings will be scaled in %s\n", (scaleVoltages)? ("millivolts") : ("ADC counts"));
+  printf("\n");
 
-	for (ch = 0; ch < unit->channelCount; ch++)
+  for (ch = 0; ch < unit->channelCount; ch++)
+    {
+      if (!(unit->channelSettings[ch].enabled))
 	{
-		if (!(unit->channelSettings[ch].enabled))
-		{
-			printf("Channel %c Voltage Range = Off\n", 'A' + ch);
-		}
-		else
-		{
-			voltage = inputRanges[unit->channelSettings[ch].range];
-			printf("Channel %c Voltage Range = ", 'A' + ch);
-			
-			if (voltage < 1000)
-			{
-				printf("%dmV\n", voltage);
-			}
-			else
-			{
-				printf("%dV\n", voltage / 1000);
-			}
-		}
+	  printf("Channel %c Voltage Range = Off\n", 'A' + ch);
 	}
+      else
+	{
+	  voltage = inputRanges[unit->channelSettings[ch].range];
+	  printf("Channel %c Voltage Range = ", 'A' + ch);
+			
+	  if (voltage < 1000)
+	    {
+	      printf("%dmV\n", voltage);
+	    }
+	  else
+	    {
+	      printf("%dV\n", voltage / 1000);
+	    }
+	}
+    }
 
-	printf("\n");
+  printf("\n");
 
-	status = ps5000aGetDeviceResolution(unit->handle, &resolution);
+  status = ps5000aGetDeviceResolution(unit->handle, &resolution);
 
-	printf("Device Resolution: ");
-	printResolution(&resolution);
+  printf("Device Resolution: ");
+  printResolution(&resolution);
 
 }
 
 /****************************************************************************
-* openDevice 
-* Parameters 
-* - unit        pointer to the UNIT structure, where the handle will be stored
-* - serial		pointer to the int8_t array containing serial number
-*
-* Returns
-* - PICO_STATUS to indicate success, or if an error occurred
-***************************************************************************/
+ * openDevice 
+ * Parameters 
+ * - unit        pointer to the UNIT structure, where the handle will be stored
+ * - serial		pointer to the int8_t array containing serial number
+ *
+ * Returns
+ * - PICO_STATUS to indicate success, or if an error occurred
+ ***************************************************************************/
 PICO_STATUS openDevice(UNIT *unit, int8_t *serial)
 {
-	PICO_STATUS status;
-	unit->resolution = PS5000A_DR_8BIT;
+  PICO_STATUS status;
+  unit->resolution = PS5000A_DR_8BIT;
 
-	if (serial == NULL)
-	{
-		status = ps5000aOpenUnit(&unit->handle, NULL, unit->resolution);
-	}
-	else
-	{
-		status = ps5000aOpenUnit(&unit->handle, serial, unit->resolution);
-	}
+  if (serial == NULL)
+    {
+      status = ps5000aOpenUnit(&unit->handle, NULL, unit->resolution);
+    }
+  else
+    {
+      status = ps5000aOpenUnit(&unit->handle, serial, unit->resolution);
+    }
 
-	unit->openStatus = (int16_t) status;
-	unit->complete = 1;
+  unit->openStatus = (int16_t) status;
+  unit->complete = 1;
 
-	return status;
+  return status;
 }
 
 /****************************************************************************
-* handleDevice
-* Parameters
-* - unit        pointer to the UNIT structure, where the handle will be stored
-*
-* Returns
-* - PICO_STATUS to indicate success, or if an error occurred
-***************************************************************************/
+ * handleDevice
+ * Parameters
+ * - unit        pointer to the UNIT structure, where the handle will be stored
+ *
+ * Returns
+ * - PICO_STATUS to indicate success, or if an error occurred
+ ***************************************************************************/
 PICO_STATUS handleDevice(UNIT * unit)
 {
-	int16_t value = 0;
-	int32_t i;
-	struct tPwq pulseWidth;
-	PICO_STATUS status;
+  int16_t value = 0;
+  int32_t i;
+  struct tPwq pulseWidth;
+  PICO_STATUS status;
 
-	printf("Handle: %d\n", unit->handle);
+  printf("Handle: %d\n", unit->handle);
 	
-	if (unit->openStatus != PICO_OK)
-	{
-		printf("Unable to open device\n");
-		printf("Error code : 0x%08x\n", (uint32_t) unit->openStatus);
+  if (unit->openStatus != PICO_OK)
+    {
+      printf("Unable to open device\n");
+      printf("Error code : 0x%08x\n", (uint32_t) unit->openStatus);
 		
-		exit(99); // exit program
-	}
+      exit(99); // exit program
+    }
 
-	printf("Device opened successfully, cycle %d\n\n", ++cycles);
+  printf("Device opened successfully, cycle %d\n\n", ++cycles);
 	
-	// Setup device info - unless it's set already
-	if (unit->model == MODEL_NONE)
-	{
-		set_info(unit);
-	}
+  // Setup device info - unless it's set already
+  if (unit->model == MODEL_NONE)
+    {
+      set_info(unit);
+    }
 
-	// Turn off any digital ports (MSO models only)
-	if (unit->digitalPortCount > 0)
-	{
-		printf("Turning off digital ports.");
+  // Turn off any digital ports (MSO models only)
+  if (unit->digitalPortCount > 0)
+    {
+      printf("Turning off digital ports.");
 
-		for (i = 0; i < unit->digitalPortCount; i++)
-		{
-			status = ps5000aSetDigitalPort(unit->handle, (PS5000A_CHANNEL)(i + PS5000A_DIGITAL_PORT0), 0, 0);
-		}
+      for (i = 0; i < unit->digitalPortCount; i++)
+	{
+	  status = ps5000aSetDigitalPort(unit->handle, (PS5000A_CHANNEL)(i + PS5000A_DIGITAL_PORT0), 0, 0);
 	}
+    }
 	
-	timebase = 1;
+  timebase = 1;
 
-	ps5000aMaximumValue(unit->handle, &value);
-	unit->maxADCValue = value;
+  ps5000aMaximumValue(unit->handle, &value);
+  unit->maxADCValue = value;
 
-	status = ps5000aCurrentPowerSource(unit->handle);
+  status = ps5000aCurrentPowerSource(unit->handle);
 
-	for (i = 0; i < unit->channelCount; i++)
+  for (i = 0; i < unit->channelCount; i++)
+    {
+      // Do not enable channels C and D if power supply not connected for PicoScope 544XA/B devices
+      /*if(unit->channelCount == QUAD_SCOPE && status == PICO_POWER_SUPPLY_NOT_CONNECTED && i >= DUAL_SCOPE)
 	{
-		// Do not enable channels C and D if power supply not connected for PicoScope 544XA/B devices
-		/*if(unit->channelCount == QUAD_SCOPE && status == PICO_POWER_SUPPLY_NOT_CONNECTED && i >= DUAL_SCOPE)
-		{
-			unit->channelSettings[i].enabled = FALSE;
-		}
-		else*/
-		{
-			unit->channelSettings[i].enabled = TRUE;
-		}
-
-		unit->channelSettings[i].DCcoupled = TRUE;
-		unit->channelSettings[i].range = PS5000A_5V;
-		unit->channelSettings[i].analogueOffset = 0.0f;
+	unit->channelSettings[i].enabled = FALSE;
 	}
+	else*/
+      {
+	unit->channelSettings[i].enabled = TRUE;
+      }
 
-	memset(&pulseWidth, 0, sizeof(struct tPwq));
+      unit->channelSettings[i].DCcoupled = TRUE;
+      unit->channelSettings[i].range = PS5000A_5V;
+      unit->channelSettings[i].analogueOffset = 0.0f;
+    }
 
-	setDefaults(unit);
+  memset(&pulseWidth, 0, sizeof(struct tPwq));
 
-	/* Trigger disabled	*/
-	status = ps5000aSetSimpleTrigger(unit->handle, 0, PS5000A_CHANNEL_A, 0, PS5000A_RISING, 0, 0);
+  setDefaults(unit);
 
-	return unit->openStatus;
+  /* Trigger disabled	*/
+  status = ps5000aSetSimpleTrigger(unit->handle, 0, PS5000A_CHANNEL_A, 0, PS5000A_RISING, 0, 0);
+
+  return unit->openStatus;
 }
 
 /****************************************************************************
-* closeDevice 
-****************************************************************************/
+ * closeDevice 
+ ****************************************************************************/
 void closeDevice(UNIT *unit)
 {
-	ps5000aCloseUnit(unit->handle);
+  ps5000aCloseUnit(unit->handle);
 }
 
 double GetTimeStamp(void)
@@ -640,7 +640,7 @@ void sendData(so_udp *so, char*data)
 {
   sendto(so->sockfd, (const char *)data, strlen(data),
 	 MSG_CONFIRM, (const struct sockaddr *) &so->servaddr,
-			sizeof(so->servaddr));
+	 sizeof(so->servaddr));
 }
 
 void collectRawFr(UNIT *unit, int taille, int npages)
@@ -704,27 +704,27 @@ void collectRawFr(UNIT *unit, int taille, int npages)
 	 nbval, debut, fin, result, sec, hz, (float)round(hz/1e4)/1e2);
 }
 /****************************************************************************
-* mainMenu
-* Controls default functions of the seelected unit
-* Parameters
-* - unit        pointer to the UNIT structure
-*
-* Returns       none
-***************************************************************************/
+ * mainMenu
+ * Controls default functions of the seelected unit
+ * Parameters
+ * - unit        pointer to the UNIT structure
+ *
+ * Returns       none
+ ***************************************************************************/
 void mainMenu(UNIT *unit, int nbuf, int npages)
 {
-	int8_t ch = '.';
-	PICO_STATUS status = ps5000aSetDeviceResolution(unit->handle, (PS5000A_DEVICE_RESOLUTION)PS5000A_DR_16BIT);
-	displaySettings(unit);
-	printf("\n\n");
-	collectRawFr(unit, nbuf, npages);
+  int8_t ch = '.';
+  PICO_STATUS status = ps5000aSetDeviceResolution(unit->handle, (PS5000A_DEVICE_RESOLUTION)PS5000A_DR_16BIT);
+  displaySettings(unit);
+  printf("\n\n");
+  collectRawFr(unit, nbuf, npages);
 }
 
 
 /****************************************************************************
-* main
-*
-***************************************************************************/
+ * main
+ *
+ ***************************************************************************/
 int32_t main(int nba, char**args, char**env)
 {
   int8_t ch;
