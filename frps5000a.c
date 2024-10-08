@@ -660,10 +660,23 @@ void collectRawFr(UNIT *unit, int taille, int npages)
   printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", taille,npages);
   ps5000aStop(unit->handle);
   printf("%d\n",cpt++);
-  ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A, buffers[0], taille, 1, 0);
+  status = ps5000aSetDataBuffer(unit->handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A, buffers[0], taille, 0, 0);
+  printf("setdatabuffer status:%d\n",status); 
   printf("%d\n",cpt++);
   sleep(1);
   debut = GetTimeStamp();
+  uint32_t downsampleRatio = 1;
+  //timeUnits = PS5000A_US;
+  uint32_t sampleCount = taille;
+  PS5000A_RATIO_MODE ratioMode = PS5000A_RATIO_MODE_NONE;
+  uint32_t preTrigger = 0;
+  uint32_t postTrigger = 1000000;
+  int16_t autostop = TRUE;
+  PS5000A_TIME_UNITS sampleInterval = 0;
+  status = ps5000aRunStreaming(unit->handle, &sampleInterval, PS5000A_NS,
+			       preTrigger, postTrigger, autostop, 
+			       downsampleRatio, ratioMode, sampleCount);
+  printf("runstreaming status: %d\n", status);
   int nbval=0;
   for (int ib=0; ib<npages; ib++)
     {
