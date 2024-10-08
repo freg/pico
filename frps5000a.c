@@ -666,9 +666,9 @@ void collectRawFr(UNIT *unit, int taille, int npages)
   int nbval=0;
   for (int ib=0; ib<npages; ib++)
     {
-      do
-	status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, taille, &over);
-      while (status == PICO_USER_CALLBACK || status == PICO_NO_SAMPLES_AVAILABLE);
+      
+      status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, taille, &over);
+      
       if (status == PICO_OK)
 	{
 	  for(int i=0; i<taille; i++)
