@@ -671,7 +671,6 @@ void collectRawFr(UNIT *unit, int taille, int npages)
       while (status == PICO_USER_CALLBACK || status == PICO_NO_SAMPLES_AVAILABLE);
       if (status == PICO_OK)
 	{
-	  //printf("%d\n",cpt++);
 	  for(int i=0; i<taille; i++)
 	    {
 	      nbval++;
@@ -686,7 +685,6 @@ void collectRawFr(UNIT *unit, int taille, int npages)
 		  strcat(sbuf,"\n");
 		}
 	      //sendData(sock, sbuf);
-	      //printf("%d\n",cpt++);
 	      fprintf(fi,sbuf);
 	    }
 	}
