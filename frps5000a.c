@@ -642,7 +642,18 @@ void sendData(so_udp *so, char*data)
 	 MSG_CONFIRM, (const struct sockaddr *) &so->servaddr,
 	 sizeof(so->servaddr));
 }
-
+/****************************************************************************
+* Callback
+* used by ps5000a data block collection calls, on receipt of data.
+* used to set global flags etc checked by user routines
+****************************************************************************/
+void PREF4 callBackBlock( int16_t handle, PICO_STATUS status, void * pParameter)
+{
+	if (status != PICO_CANCELLED)
+	{
+		g_ready = TRUE;
+	}
+}
 void collectRawFr(UNIT *unit, int taille, int npages)
 {
   int16_t status, over=0;
@@ -653,13 +664,25 @@ void collectRawFr(UNIT *unit, int taille, int npages)
   double debut, fin, result, sec, hz ;
   int cpt=0;
   char sbuf[1024];
+  int32_t timeIndisposed;
+  int16_t ready;
   buffers[0] = (int16_t*) calloc(taille+1, sizeof(int16_t));
   buffers[1] = (int16_t*) calloc(taille+1, sizeof(int16_t));
   fi = fopen("data.txt", "a");
   //sock = createSocketUDP();
   printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", taille,npages);
   ps5000aStop(unit->handle);
-  printf("%d\n",cpt++);
+  status = ps5000aSetChannel (unit->handle, PS5000A_CHANNEL_A, 1, PS5000A_AC, PS5000A_MAX_RANGES, 0);
+  printf("setchannel status: %d\n", status);
+  status = ps5000aGetTimebase (unit->handle, 4, taille, NULL, NULL, 0);
+  printf("gettimebase status: %d\n", status);
+  //int16_t triggerThreshold = mv_to_adc(triggerVoltage, unit->channelSettings[triggerChannel].range, unit);
+  status = ps5000aSetSimpleTrigger(unit->handle, 1, PS5000A_CHANNEL_A, 0, PICO_RISING_OR_FALLING, 0, 0);
+  printf("setsimpletrigger status: %d\n", status);
+  //ps5000aSetTriggerDigitalPortProperties();
+  status = ps5000aRunBlock(unit->handle, 0, taille, 4, &timeIndisposed, 0, callBackBlock, NULL);
+  while(!ps5000aIsReady(unit->handle, &ready));
+  
   status = ps5000aSetDataBuffer(unit->handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A, buffers[0], taille, 0, 0);
   printf("setdatabuffer status:%d\n",status); 
   printf("%d\n",cpt++);
