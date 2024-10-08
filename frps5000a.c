@@ -653,13 +653,14 @@ void collectRawFr(UNIT *unit, int taille, int npages)
   double debut, fin, result, sec, hz ;
   int cpt=0;
   char sbuf[1024];
-  
+  buffers[0] = (int16_t*) calloc(taille+1, sizeof(int16_t));
+  buffers[1] = (int16_t*) calloc(taille+1, sizeof(int16_t));
   fi = fopen("data.txt", "a");
   //sock = createSocketUDP();
   printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", taille,npages);
   ps5000aStop(unit->handle);
   printf("%d\n",cpt++);
-  ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A, &buffers, taille, 1, 0);
+  ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A, buffers[0], taille, 1, 0);
   printf("%d\n",cpt++);
   sleep(1);
   debut = GetTimeStamp();
@@ -694,7 +695,8 @@ void collectRawFr(UNIT *unit, int taille, int npages)
   fclose(fi);
   //close(sock->sockfd);
   fin = GetTimeStamp();
-
+  free(buffers[1]);
+  free(buffers[0]);
   result = fin - debut ;
   sec = result / 1e9;
   hz = sec ? nbval/sec:1;
