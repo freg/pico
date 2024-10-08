@@ -25,6 +25,15 @@
 #endif
 #include <math.h>
 
+/* Socket UDP */
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+	
+#define PORT	 8080
+#define MAXLINE 1024
+/* */
+
 #define Sleep(a) usleep(1000*a)
 #define memcpy_s(a,b,c,d) memcpy(a,c,d)
 
@@ -603,41 +612,89 @@ double GetTimeStamp(void)
   clock_gettime(CLOCK_REALTIME, &start);
   return 1e9 * start.tv_sec + start.tv_nsec;        // return ns time stamp
 }
+typedef struct sockudp
+{
+  int sockfd;
+  struct sockaddr_in	 servaddr;
+} so_udp;
+
+so_udp* createSocketUDP()
+{
+  static so_udp sock ;
+  // Creating socket file descriptor
+  if ( (sock.sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+    perror("socket creation failed");
+    exit(EXIT_FAILURE);
+  }
+  
+  memset(&sock.servaddr, 0, sizeof(sock.servaddr));
+  
+  // Filling server information
+  sock.servaddr.sin_family = AF_INET;
+  sock.servaddr.sin_port = htons(PORT);
+  sock.servaddr.sin_addr.s_addr = INADDR_ANY;
+  return &sock ;
+}
+
+void sendData(so_udp *so, char*data)
+{
+  sendto(so->sockfd, (const char *)data, strlen(data),
+	 MSG_CONFIRM, (const struct sockaddr *) &so->servaddr,
+			sizeof(so->servaddr));
+}
+
 void collectRawFr(UNIT *unit, int taille, int npages)
 {
   int16_t status, over=0;
   int32_t no=1;
   int16_t * buffers[2 * PS5000A_MAX_CHANNELS];
-  
+  so_udp *sock ;
   FILE * fi;
   double debut, fin, result, sec, hz ;
   int cpt=0;
+  char sbuf[1024];
+  
   fi = fopen("data.txt", "a");
-  printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", TBUF, NBPAGES);
+  //sock = createSocketUDP();
+  printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", taille,npages);
   ps5000aStop(unit->handle);
   printf("%d\n",cpt++);
   ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A, &buffers, taille, 1, 0);
   printf("%d\n",cpt++);
+  sleep(1);
   debut = GetTimeStamp();
   int nbval=0;
   for (int ib=0; ib<npages; ib++)
     {
-      status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, taille, &over);
-      
-      for(int i=0; i<taille; i++)
+      do
+	status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, taille, &over);
+      while (status == PICO_USER_CALLBACK || status == PICO_NO_SAMPLES_AVAILABLE);
+      if (status == PICO_OK)
 	{
-	  nbval++;
-	  //printf("page %d, pbuf %d %d\n",ib,i,cpt++);
-	  fprintf(fi,"ADC_A,ADC_B");
-	  for (int j = 0; j < unit->channelCount; j++)
+	  //printf("%d\n",cpt++);
+	  for(int i=0; i<taille; i++)
 	    {
-	      fprintf(fi,",%6d",
-		   adc_to_mv(buffers[j * 2][i], unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit) );
+	      nbval++;
+	      strcpy(sbuf, "ADC_A,ADC_B");
+	      //sendData(sock, "ADC_A,ADC_B");
+	      for (int j = 0; j < unit->channelCount; j++)
+		{
+		  sprintf(&sbuf[strlen(sbuf)], ",%6d",
+			  adc_to_mv(buffers[j * 2][i],
+				    unit->channelSettings[PS5000A_CHANNEL_A + j].range,
+				    unit) );
+		  strcat(sbuf,"\n");
+		}
+	      //sendData(sock, sbuf);
+	      //printf("%d\n",cpt++);
+	      fprintf(fi,sbuf);
 	    }
-	  fprintf(fi, "\n");
 	}
+      else
+	printf("Status: %d\n",status);
     }
   fclose(fi);
+  //close(sock->sockfd);
   fin = GetTimeStamp();
 
   result = fin - debut ;
@@ -689,9 +746,11 @@ int32_t main(int nba, char**args, char**env)
 	      {
 	      case 'n': // taille de la page/buffer
 		nbuf=atoi(args[ia+1]);
+		printf("taille du buffer: %d\n",nbuf);
 		break;
 	      case 'p': // nombre de pages
 		npages = atoi(args[ia+1]);
+		printf("nombre de pages: %d\n",npages);
 		break;
 	      default:
 		printf("%s usage:\n\t-n <taille du buffer>\n\t-p <nombre de pages>\n", *args[0]);
