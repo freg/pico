@@ -25,15 +25,6 @@
 #endif
 #include <math.h>
 
-/* Socket UDP */
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-	
-#define PORT	 8080
-#define MAXLINE 1024
-/* */
-
 #define Sleep(a) usleep(1000*a)
 #define memcpy_s(a,b,c,d) memcpy(a,c,d)
 
@@ -612,36 +603,7 @@ double GetTimeStamp(void)
   clock_gettime(CLOCK_REALTIME, &start);
   return 1e9 * start.tv_sec + start.tv_nsec;        // return ns time stamp
 }
-typedef struct sockudp
-{
-  int sockfd;
-  struct sockaddr_in	 servaddr;
-} so_udp;
 
-so_udp* createSocketUDP()
-{
-  static so_udp sock ;
-  // Creating socket file descriptor
-  if ( (sock.sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-    perror("socket creation failed");
-    exit(EXIT_FAILURE);
-  }
-  
-  memset(&sock.servaddr, 0, sizeof(sock.servaddr));
-  
-  // Filling server information
-  sock.servaddr.sin_family = AF_INET;
-  sock.servaddr.sin_port = htons(PORT);
-  sock.servaddr.sin_addr.s_addr = INADDR_ANY;
-  return &sock ;
-}
-
-void sendData(so_udp *so, char*data)
-{
-  sendto(so->sockfd, (const char *)data, strlen(data),
-	 MSG_CONFIRM, (const struct sockaddr *) &so->servaddr,
-	 sizeof(so->servaddr));
-}
 /****************************************************************************
 * Callback
 * used by ps5000a data block collection calls, on receipt of data.
@@ -748,9 +710,6 @@ void mainMenu(UNIT *unit, int nbuf, int npages)
 int32_t main(int nba, char**args, char**env)
 {
   uint16_t devCount = 0, listIter = 0,	openIter = 0;
-  //device indexer -  64 chars - 64 is maximum number of picoscope devices handled by driver
-  int8_t devChars[] =
-    "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#";
   PICO_STATUS status = PICO_OK;
   UNIT Unit;
   int nbuf = TBUF, npages = NBPAGES;
