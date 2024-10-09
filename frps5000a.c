@@ -659,7 +659,7 @@ void PREF4 callBackBlock( int16_t handle, PICO_STATUS status, void * pParameter)
       int16_t * buffers[2];
       int16_t over=0;
       int32_t no=1,nbval=0;
-      UNIT * unit = (UNIT*)pParameter;
+      UNIT * unit = *(UNIT**)pParameter;
       FILE *fi;
       buffers[0] = (int16_t*) calloc(10000, sizeof(int16_t));
       status = ps5000aSetDataBuffer(handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A, buffers[0], 10000, 0, 0);
@@ -685,104 +685,43 @@ void PREF4 callBackBlock( int16_t handle, PICO_STATUS status, void * pParameter)
 }
 void collectRawFr(UNIT *unit, int taille, int npages)
 {
-  int16_t status, over=0;
+int16_t status, over=0;
   int32_t no=1;
   int16_t * buffers[2 * PS5000A_MAX_CHANNELS];
-  so_udp *sock ;
+#define TBUF 2000
+#define NBPAGES 1000
   FILE * fi;
   double debut, fin, result, sec, hz ;
-  int cpt=0;
-  char sbuf[1024];
-  int32_t timeIndisposed;
-  int16_t ready;
-  int16_t nmax=0; //compteur de boucle
-#define WAITMAX 10 // attente max
-  buffers[0] = (int16_t*) calloc(taille+1, sizeof(int16_t));
-  buffers[1] = (int16_t*) calloc(taille+1, sizeof(int16_t));
   fi = fopen("data.txt", "a");
-  //sock = createSocketUDP();
-  printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", taille,npages);
+  printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", TBUF, NBPAGES);
   ps5000aStop(unit->handle);
-  status = ps5000aSetChannel (unit->handle, PS5000A_CHANNEL_D, 0, PS5000A_AC, PS5000A_MAX_RANGES, 0);
-  printf("setchannel D status: %d\n", status);
-  status = ps5000aSetChannel (unit->handle, PS5000A_CHANNEL_C, 0, PS5000A_AC, PS5000A_MAX_RANGES, 0);
-  printf("setchannel C status: %d\n", status);
-  status = ps5000aSetChannel (unit->handle, PS5000A_CHANNEL_B, 0, PS5000A_AC, PS5000A_MAX_RANGES, 0);
-  printf("setchannel Bstatus: %d\n", status);
-  status = ps5000aSetChannel (unit->handle, PS5000A_CHANNEL_A, 1, PS5000A_AC, PS5000A_5V, 0);
-  printf("setchannel A status: %d\n", status);
-  status = ps5000aGetTimebase (unit->handle, 4, taille, NULL, NULL, 0);
-  printf("gettimebase status: %d\n", status);
-  //int16_t triggerThreshold = mv_to_adc(triggerVoltage, unit->channelSettings[triggerChannel].range, unit);
-  status = ps5000aSetSimpleTrigger(unit->handle, 1, PS5000A_CHANNEL_A, 0, PICO_RISING_OR_FALLING, 0, 0);
-  printf("setsimpletrigger status: %d\n", status);
-  //ps5000aSetTriggerDigitalPortProperties();
-  
-  status = ps5000aRunBlock(unit->handle, 0, taille, 4, &timeIndisposed, 0, callBackBlock, NULL);
-  printf("runblock status: %d\n",status);
-  do
-    {
-      status = ps5000aIsReady(unit->handle, &ready);
-      sleep(1);
-    }
-  while(!status&&nmax++<WAITMAX);
-  printf("sortie isready: status:%d nboucles:%d\n",status,nmax);
-  /*status = ps5000aSetDataBuffer(unit->handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A, buffers[0], taille, 0, 0);
-  printf("setdatabuffer status:%d\n",status); 
-  printf("%d\n",cpt++);*/
-  //sleep(1);
+  ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A, &buffers, TBUF, 1, 0);
   debut = GetTimeStamp();
-  /*
-  uint32_t downsampleRatio = 1;
-  //timeUnits = PS5000A_US;
-  uint32_t sampleCount = taille;
-  PS5000A_RATIO_MODE ratioMode = PS5000A_RATIO_MODE_NONE;
-  uint32_t preTrigger = 0;
-  uint32_t postTrigger = 1000000;
-  int16_t autostop = TRUE;
-  PS5000A_TIME_UNITS sampleInterval = 0;
-  status = ps5000aRunStreaming(unit->handle, &sampleInterval, PS5000A_NS,
-			       preTrigger, postTrigger, autostop, 
-			       downsampleRatio, ratioMode, sampleCount);
-  printf("runstreaming status: %d\n", status);
   int nbval=0;
-  for (int ib=0; ib<npages; ib++)
+  for (int ib=0; ib<NBPAGES; ib++)
     {
-      
-      status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, taille, &over);
-      
-      if (status == PICO_OK)
+      status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, TBUF, &over);
+
+      for(int i=0; i<TBUF; i++)
 	{
-	  for(int i=0; i<taille; i++)
+	  nbval++;
+	  fprintf(fi,"ADC_A,ADC_B");
+	  for (int j = 0; j < unit->channelCount; j++)
 	    {
-	      nbval++;
-	      strcpy(sbuf, "ADC_A,ADC_B");
-	      //sendData(sock, "ADC_A,ADC_B");
-	      for (int j = 0; j < unit->channelCount; j++)
-		{
-		  sprintf(&sbuf[strlen(sbuf)], ",%6d",
-			  adc_to_mv(buffers[j * 2][i],
-				    unit->channelSettings[PS5000A_CHANNEL_A + j].range,
-				    unit) );
-		  strcat(sbuf,"\n");
-		}
-	      //sendData(sock, sbuf);
-	      fprintf(fi,sbuf);
+	      fprintf(fi,",%6d",
+		      adc_to_mv(buffers[j * 2][i], unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit) );
 	    }
+	  fprintf(fi, "\n");
 	}
-      else
-	printf("Status: %d\n",status);
     }
   fclose(fi);
-  //close(sock->sockfd);
   fin = GetTimeStamp();
-  free(buffers[1]);
-  free(buffers[0]);
+
   result = fin - debut ;
   sec = result / 1e9;
   hz = sec ? nbval/sec:1;
-  printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz %2f MHz\n",
-  nbval, debut, fin, result, sec, hz, (float)round(hz/1e4)/1e2);*/
+  printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz \n",
+	 nbval, debut, fin, result, sec, hz);
 }
 /****************************************************************************
  * mainMenu
@@ -795,7 +734,7 @@ void collectRawFr(UNIT *unit, int taille, int npages)
 void mainMenu(UNIT *unit, int nbuf, int npages)
 {
   int8_t ch = '.';
-  PICO_STATUS status = ps5000aSetDeviceResolution(unit->handle, (PS5000A_DEVICE_RESOLUTION)PS5000A_DR_16BIT);
+  PICO_STATUS status = ps5000aSetDeviceResolution(unit->handle, (PS5000A_DEVICE_RESOLUTION)PS5000A_DR_15BIT);
   displaySettings(unit);
   printf("\n\n");
   collectRawFr(unit, nbuf, npages);
@@ -808,7 +747,6 @@ void mainMenu(UNIT *unit, int nbuf, int npages)
  ***************************************************************************/
 int32_t main(int nba, char**args, char**env)
 {
-  int8_t ch;
   uint16_t devCount = 0, listIter = 0,	openIter = 0;
   //device indexer -  64 chars - 64 is maximum number of picoscope devices handled by driver
   int8_t devChars[] =
