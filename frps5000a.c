@@ -649,10 +649,39 @@ void sendData(so_udp *so, char*data)
 ****************************************************************************/
 void PREF4 callBackBlock( int16_t handle, PICO_STATUS status, void * pParameter)
 {
-	if (status != PICO_CANCELLED)
+  if (status != PICO_CANCELLED)
+    {
+      g_ready = TRUE;
+    }
+  printf("callBackBlock status:%d\n",status);
+  if (status == PICO_OK)
+    {
+      int16_t * buffers[2];
+      int16_t over=0;
+      int32_t no=1,nbval=0;
+      UNIT * unit = (UNIT*)pParameter;
+      FILE *fi;
+      buffers[0] = (int16_t*) calloc(10000, sizeof(int16_t));
+      status = ps5000aSetDataBuffer(handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A, buffers[0], 10000, 0, 0);
+      printf("setdatabuffer status:%d\n",status);
+      status = ps5000aGetValues(handle, PS5000A_CHANNEL_A, &no, 0, 0, 1000, &over);
+      printf("getValues status: %d\n",status);
+      if (status==PICO_OK)
 	{
-		g_ready = TRUE;
+	  fi = fopen("data.txt", "a");
+	  for(int i=0; i<1000; i++)
+	    {
+	      nbval++;
+	      
+	      fprintf(fi, "ADC_A,%6d\n",
+		      adc_to_mv(buffers[0][i],
+				unit->channelSettings[PS5000A_CHANNEL_A].range,
+				unit) );
+	    }
+	  fclose(fi);
 	}
+    }
+      
 }
 void collectRawFr(UNIT *unit, int taille, int npages)
 {
@@ -667,7 +696,7 @@ void collectRawFr(UNIT *unit, int taille, int npages)
   int32_t timeIndisposed;
   int16_t ready;
   int16_t nmax=0; //compteur de boucle
-#define WAITMAX 1000 // attente max
+#define WAITMAX 10 // attente max
   buffers[0] = (int16_t*) calloc(taille+1, sizeof(int16_t));
   buffers[1] = (int16_t*) calloc(taille+1, sizeof(int16_t));
   fi = fopen("data.txt", "a");
@@ -688,14 +717,22 @@ void collectRawFr(UNIT *unit, int taille, int npages)
   status = ps5000aSetSimpleTrigger(unit->handle, 1, PS5000A_CHANNEL_A, 0, PICO_RISING_OR_FALLING, 0, 0);
   printf("setsimpletrigger status: %d\n", status);
   //ps5000aSetTriggerDigitalPortProperties();
-  status = ps5000aRunBlock(unit->handle, 0, taille, 3, &timeIndisposed, 0, callBackBlock, NULL);
-  while(!ps5000aIsReady(unit->handle, &ready)&&nmax++<WAITMAX) sleep(0.1);
   
-  status = ps5000aSetDataBuffer(unit->handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A, buffers[0], taille, 0, 0);
+  status = ps5000aRunBlock(unit->handle, 0, taille, 4, &timeIndisposed, 0, callBackBlock, NULL);
+  printf("runblock status: %d\n",status);
+  do
+    {
+      status = ps5000aIsReady(unit->handle, &ready);
+      sleep(1);
+    }
+  while(!status&&nmax++<WAITMAX);
+  printf("sortie isready: status:%d nboucles:%d\n",status,nmax);
+  /*status = ps5000aSetDataBuffer(unit->handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A, buffers[0], taille, 0, 0);
   printf("setdatabuffer status:%d\n",status); 
-  printf("%d\n",cpt++);
-  sleep(1);
+  printf("%d\n",cpt++);*/
+  //sleep(1);
   debut = GetTimeStamp();
+  /*
   uint32_t downsampleRatio = 1;
   //timeUnits = PS5000A_US;
   uint32_t sampleCount = taille;
@@ -745,7 +782,7 @@ void collectRawFr(UNIT *unit, int taille, int npages)
   sec = result / 1e9;
   hz = sec ? nbval/sec:1;
   printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz %2f MHz\n",
-	 nbval, debut, fin, result, sec, hz, (float)round(hz/1e4)/1e2);
+  nbval, debut, fin, result, sec, hz, (float)round(hz/1e4)/1e2);*/
 }
 /****************************************************************************
  * mainMenu
