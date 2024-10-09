@@ -693,16 +693,16 @@ int16_t status, over=0;
   FILE * fi;
   double debut, fin, result, sec, hz ;
   fi = fopen("data.txt", "a");
-  printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", TBUF, NBPAGES);
+  printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", taille, NBPAGES);
   ps5000aStop(unit->handle);
   ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A, &buffers, TBUF, 1, 0);
   debut = GetTimeStamp();
   int nbval=0;
-  for (int ib=0; ib<NBPAGES; ib++)
+  for (int ib=0; ib<npages; ib++)
     {
-      status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, TBUF, &over);
+      status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, taille, &over);
 
-      for(int i=0; i<TBUF; i++)
+      for(int i=0; i<taille; i++)
 	{
 	  nbval++;
 	  fprintf(fi,"ADC_A,ADC_B");
@@ -720,8 +720,8 @@ int16_t status, over=0;
   result = fin - debut ;
   sec = result / 1e9;
   hz = sec ? nbval/sec:1;
-  printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz \n",
-	 nbval, debut, fin, result, sec, hz);
+  printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz %f Mhz\n",
+	 nbval, debut, fin, result, sec, hz, hz/1e6);
 }
 /****************************************************************************
  * mainMenu
