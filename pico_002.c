@@ -25,6 +25,9 @@
 #include <stdbool.h>
 
 struct termios info;
+#include <unistd.h>
+#include <fcntl.h>
+
 
 /*************************************************************************
  * parameters and data from original example
@@ -618,6 +621,7 @@ void StreamingCallback(int16_t handle,
 			 void * pParameter
 			 )
 {
+  printf("streamingcallback %d\n", noOfSamples);
   // used for streaming
   g_sampleCount = noOfSamples;
   g_startIndex = startIndex;
@@ -654,8 +658,12 @@ void acq_continue()
    WriteLine("Collect streaming...");
    WriteLine("Data is written to disk file (stream.txt)");
    WriteLine("Press a key to start");
-   while(!getchar())sleep(1);
-
+   while(!getchar())
+     {
+       fflush(stdin);
+       sleep(1);
+     }
+   fflush(stdin);
    /* Trigger disabled	
    * SetTrigger(null, 0, null, 0, null, null, 0, 0, 0);
    */
@@ -688,7 +696,9 @@ void acq_continue()
  WriteLine("Press ESC key to stop");
  while ((ch=getchar()) != 27 /* ascii ESC */)
    {
-     ps5000aGetValuesAsync(
+     fflush(stdin);
+     printf("ch: %c boucle\n",ch);
+     status = ps5000aGetValuesAsync(
 			   _handle,
 			   g_startIndex,
 			   sampleInterval,
@@ -697,8 +707,9 @@ void acq_continue()
 			   0,
 			   StreamingCallback,
 			   NULL);
-     ps5000aGetStreamingLatestValues(_handle, StreamingCallback, NULL);
-
+     printf("status getvalueasync: %d\n", status);
+     status = ps5000aGetStreamingLatestValues(_handle, StreamingCallback, NULL);
+     printf("status getstreaminglatest: %d\n", status);
      if (g_ready && g_sampleCount > 0) /* can be ready and have no data, if autoStop has fired */
        {
 	 printf("data ready\n");
@@ -734,7 +745,7 @@ int32_t main(void)
   info.c_cc[VMIN] = 1;          /* wait until at least one keystroke available */
   info.c_cc[VTIME] = 0;         /* no timeout */
   tcsetattr(0, TCSANOW, &info); /* set immediately */
-  
+  fcntl(0, F_SETFL, O_NONBLOCK); /* 0 is the stdin file decriptor */  
   status = openDevice(punit, NULL);
   if (status == PICO_NOT_FOUND)
     {
@@ -758,5 +769,9 @@ int32_t main(void)
   acq_continue();
   closeDevice(punit);
   printf("Exit...\n");
+  tcgetattr(0, &info);
+  info.c_lflag |= ICANON;
+  tcsetattr(0, TCSANOW, &info);
+
   return 0;
 }
