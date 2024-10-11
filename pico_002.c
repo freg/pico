@@ -654,12 +654,13 @@ void acq_continue()
    WriteLine("Collect streaming...");
    WriteLine("Data is written to disk file (stream.txt)");
    WriteLine("Press a key to start");
-   while(getchar())sleep(1);
+   while(!getchar())sleep(1);
 
    /* Trigger disabled	
    * SetTrigger(null, 0, null, 0, null, null, 0, 0, 0);
    */
  
+
  status = ps5000aMemorySegments(_handle, 2, &nbr_ech);
  
  for (int i = 0; i < g_channelCount; i++) // create data buffers
@@ -683,8 +684,9 @@ void acq_continue()
  //WriteLine(status);
  fi = fopen("data.txt", "a");
  fprintf(fi, "ADC_A,ADC_B\n");
- 
- while (getchar() != 27 /* ascii ESC */)
+ char ch;
+ WriteLine("Press ESC key to stop");
+ while ((ch=getchar()) != 27 /* ascii ESC */)
    {
      ps5000aGetValuesAsync(
 			   _handle,
@@ -699,11 +701,12 @@ void acq_continue()
 
      if (g_ready && g_sampleCount > 0) /* can be ready and have no data, if autoStop has fired */
        {
+	 printf("data ready\n");
 	 if (g_trig > 0)
 	   triggeredAt = totalsamples + g_trigAt;
 	 totalsamples += (uint)g_sampleCount;
 	 for(int i=g_startIndex; i< (g_startIndex + g_sampleCount); i++)
-	   fprintf(fi, "ADC_A,%6d\n",
+	   fprintf(fi, "%6d,0\n",
 		 adc_to_mv(Buffer[0][i],
 			   _unit.channelSettings[PS5000A_CHANNEL_A].range,
 			   &_unit) );
@@ -752,7 +755,7 @@ int32_t main(void)
    ****************/
   status = ps5000aSetDeviceResolution(punit->handle, (PS5000A_DEVICE_RESOLUTION)PS5000A_DR_14BIT);
   displaySettings(punit);
-  
+  acq_continue();
   closeDevice(punit);
   printf("Exit...\n");
   return 0;
