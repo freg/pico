@@ -675,12 +675,14 @@ void acq_continue()
    {
      Buffer[i] = (int16_t*) calloc(10000, sizeof(int16_t));
      Pinned[i] = (short*)calloc(g_channelCount, sizeof(short));
-     status = ps5000aSetDataBuffer(_handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A+i,
+     status = ps5000aSetDataBuffer(_unit.handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A+i,
 				   Buffer[i], (int)sampleCount, 0, 0);
+     printf("status SetDataBuffer: %d\n",status);
    }
-            
+ if (status != PICO_OK)
+   return ;
  status = ps5000aRunStreaming(
-		       _handle, 
+		       _unit.handle, 
 		       &sampleInterval, 
 		       PS5000A_NS,
 		       preTrigger, 
@@ -688,7 +690,9 @@ void acq_continue()
 		       FALSE,
 		       1,
 		       sampleCount,0);
-
+ printf("status RunStreaming: %d\n", status);
+ if (status != PICO_OK)
+   return ;
  //WriteLine(status);
  fi = fopen("data.txt", "a");
  fprintf(fi, "ADC_A,ADC_B\n");
@@ -699,7 +703,7 @@ void acq_continue()
      fflush(stdin);
      printf("ch: %c boucle\n",ch);
      status = ps5000aGetValuesAsync(
-			   _handle,
+			   _unit.handle,
 			   g_startIndex,
 			   sampleInterval,
 			   PS5000A_RATIO_MODE_NONE,
@@ -708,8 +712,13 @@ void acq_continue()
 			   StreamingCallback,
 			   NULL);
      printf("status getvalueasync: %d\n", status);
-     status = ps5000aGetStreamingLatestValues(_handle, StreamingCallback, NULL);
+      if (status != PICO_OK)
+	break;
+     status = ps5000aGetStreamingLatestValues(_unit.handle, StreamingCallback, NULL);
      printf("status getstreaminglatest: %d\n", status);
+     if (status != PICO_OK)
+       break;
+      
      if (g_ready && g_sampleCount > 0) /* can be ready and have no data, if autoStop has fired */
        {
 	 printf("data ready\n");
