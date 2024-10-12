@@ -75,6 +75,7 @@ int16_t g_trig = 0;
 uint32_t g_trigAt = 0;
 int16_t g_overflow = 0;
 short g_channelCount = 2;
+BOOL g_stop = FALSE;
 
 typedef enum
 {
@@ -621,7 +622,7 @@ void StreamingCallback(int16_t handle,
 			 void * pParameter
 			 )
 {
-  printf("streamingcallback %d\n", noOfSamples);
+  //printf("streamingcallback %d\n", noOfSamples);
   // used for streaming
   g_sampleCount = noOfSamples;
   g_startIndex = startIndex;
@@ -633,11 +634,9 @@ void StreamingCallback(int16_t handle,
   // flags to show if & where a trigger has occurred
   g_trig = triggered;
   g_trigAt = triggerAt;
-  printf("CallBack noOfSamples:%d triggerAt: %d triggered: %d startIndex: %d\n",
-	 noOfSamples, triggerAt, triggered, startIndex);
-	 
+  //printf("CallBack noOfSamples:%d triggerAt: %d triggered: %d startIndex: %d\n",
+  //	 noOfSamples, triggerAt, triggered, startIndex);
 }
-
 
 /****************************************************************************
  * CollectStreamingImmediate
@@ -647,7 +646,7 @@ void StreamingCallback(int16_t handle,
 void acq_continue()
  {
    short status;
-   uint sampleInterval = 200;
+   uint sampleInterval = 20000;
    uint preTrigger = 0;
    uint sampleCount = 100000;
    int nbr_ech = 50000;
@@ -656,6 +655,7 @@ void acq_continue()
    uint totalsamples = 0;
    uint triggeredAt = 0;
    FILE *fi;
+   double debut=0, fin, result, sec, hz ;
    setDefaults(&_unit);
    
    WriteLine("Collect streaming...");
@@ -692,7 +692,7 @@ void acq_continue()
 			      PS5000A_NS,
 			      preTrigger, 
 			      1000000 - preTrigger, 
-			      FALSE,
+			      TRUE,
 			      sampleRatio,
 			      PS5000A_RATIO_MODE_NONE,
 			      (int)sampleCount);
@@ -708,9 +708,8 @@ void acq_continue()
  fprintf(fi, "ADC_A,ADC_B\n");
  char ch=0;
  WriteLine("Press ESC key to stop");
- while ((ch=getchar()) != 27 /* ascii ESC */)
+ while(TRUE)
    {
-     if (ch) fflush(stdin);
      //printf("ch: %c boucle start index: %d\n",ch, g_startIndex);
      status = ps5000aGetValuesAsync(
 				    _unit.handle,
@@ -723,8 +722,10 @@ void acq_continue()
 				    NULL);
      if (status == PICO_OK)
        {
-	 printf("startIndex ok:%d sampleInterval:%d\n",
-		g_startIndex, sampleInterval);
+	 if (!debut)
+	   debut = GetTimeStamp();
+	 //printf("startIndex ok:%d sampleInterval:%d\n",
+	 //	g_startIndex, sampleInterval);
        }
      else
        if (status == PICO_STARTINDEX_INVALID)
@@ -748,7 +749,7 @@ void acq_continue()
        }
      if (g_ready && g_sampleCount > 0) /* can be ready and have no data, if autoStop has fired */
        {
-	 printf("data ready sampleCount: %d\n", g_sampleCount);
+	 //printf("data ready sampleCount: %d\n", g_sampleCount);
 	 if (g_trig > 0)
 	   triggeredAt = totalsamples + g_trigAt;
 	 totalsamples += (uint)g_sampleCount;
@@ -759,8 +760,24 @@ void acq_continue()
 			   &_unit) );
 	 
        }
+     ch=getchar();
+     if (ch == 27)
+       break;
+     fflush(stdin);
    }
+ fin = GetTimeStamp();
+ result = fin - debut ;
+ sec = result / 1e9;
+ hz = sec ? totalsamples/sec:1;
+ printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz %f Mhz\n",
+	totalsamples, debut, fin, result, sec, hz, hz/1e6);
+ printf("STOP\n");
  ps5000aStop(_unit.handle);
+ for (int i = g_channelCount;i>0; i--) // delete data buffers
+   {
+     free(Pinned[i-1]);
+     free(Buffer[i-1]);
+   }
  fclose(fi);
  }
 
