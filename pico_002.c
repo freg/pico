@@ -633,6 +633,9 @@ void StreamingCallback(int16_t handle,
   // flags to show if & where a trigger has occurred
   g_trig = triggered;
   g_trigAt = triggerAt;
+  printf("CallBack noOfSamples:%d triggerAt: %d triggered: %d startIndex: %d\n",
+	 noOfSamples, triggerAt, triggered, startIndex);
+	 
 }
 
 
@@ -681,47 +684,71 @@ void acq_continue()
    }
  if (status != PICO_OK)
    return ;
+ uint32_t sampleRatio = 1; 
+
  status = ps5000aRunStreaming(
-		       _unit.handle, 
-		       &sampleInterval, 
-		       PS5000A_NS,
-		       preTrigger, 
-		       1000000 - preTrigger, 
-		       FALSE,
-		       1,
-		       sampleCount,0);
- printf("status RunStreaming: %d\n", status);
+			      _unit.handle, 
+			      &sampleInterval, 
+			      PS5000A_NS,
+			      preTrigger, 
+			      1000000 - preTrigger, 
+			      FALSE,
+			      sampleRatio,
+			      PS5000A_RATIO_MODE_NONE,
+			      (int)sampleCount);
+ 
+ printf("status RunStreaming: %d sampleRatio: %ld\n", status, sampleRatio);
+ if (status==13)
+   printf("PICO_INVALID_PARAMETER\n");
+ 
  if (status != PICO_OK)
    return ;
  //WriteLine(status);
  fi = fopen("data.txt", "a");
  fprintf(fi, "ADC_A,ADC_B\n");
- char ch;
+ char ch=0;
  WriteLine("Press ESC key to stop");
  while ((ch=getchar()) != 27 /* ascii ESC */)
    {
-     fflush(stdin);
-     printf("ch: %c boucle\n",ch);
+     if (ch) fflush(stdin);
+     //printf("ch: %c boucle start index: %d\n",ch, g_startIndex);
      status = ps5000aGetValuesAsync(
-			   _unit.handle,
-			   g_startIndex,
-			   sampleInterval,
-			   PS5000A_RATIO_MODE_NONE,
-			   PS5000A_RATIO_MODE_NONE,
-			   0,
-			   StreamingCallback,
-			   NULL);
-     printf("status getvalueasync: %d\n", status);
-      if (status != PICO_OK)
-	break;
-     status = ps5000aGetStreamingLatestValues(_unit.handle, StreamingCallback, NULL);
-     printf("status getstreaminglatest: %d\n", status);
+				    _unit.handle,
+				    g_startIndex,
+				    sampleInterval,
+				    PS5000A_RATIO_MODE_NONE,
+				    PS5000A_RATIO_MODE_NONE,
+				    0,
+				    StreamingCallback,
+				    NULL);
+     if (status == PICO_OK)
+       {
+	 printf("startIndex ok:%d sampleInterval:%d\n",
+		g_startIndex, sampleInterval);
+       }
+     else
+       if (status == PICO_STARTINDEX_INVALID)
+	 {
+	   g_startIndex++;
+	   continue;
+	 }
+       
+
      if (status != PICO_OK)
-       break;
-      
+       {
+	 printf("status getvalueasync: %d\n", status);
+	 break;
+       }
+     status = ps5000aGetStreamingLatestValues(_unit.handle, StreamingCallback, NULL);
+     
+     if (status != PICO_OK)
+       {
+	 printf("status getstreaminglatest: %d\n", status);
+	 break;
+       }
      if (g_ready && g_sampleCount > 0) /* can be ready and have no data, if autoStop has fired */
        {
-	 printf("data ready\n");
+	 printf("data ready sampleCount: %d\n", g_sampleCount);
 	 if (g_trig > 0)
 	   triggeredAt = totalsamples + g_trigAt;
 	 totalsamples += (uint)g_sampleCount;
