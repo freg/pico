@@ -646,7 +646,8 @@ void StreamingCallback(int16_t handle,
 void acq_continue()
  {
    short status;
-   uint sampleInterval = 20000;
+   uint sampleInterval = 40000;
+   uint taille = 50000 ;
    uint preTrigger = 0;
    uint sampleCount = 100000;
    int nbr_ech = 50000;
@@ -676,7 +677,7 @@ void acq_continue()
  
  for (int i = 0; i < g_channelCount; i++) // create data buffers
    {
-     Buffer[i] = (int16_t*) calloc(10000, sizeof(int16_t));
+     Buffer[i] = (int16_t*) calloc(taille, sizeof(int16_t));
      Pinned[i] = (short*)calloc(g_channelCount, sizeof(short));
      status = ps5000aSetDataBuffer(_unit.handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A+i,
 				   Buffer[i], (int)sampleCount, 0, 0);
@@ -708,6 +709,7 @@ void acq_continue()
  fprintf(fi, "ADC_A,ADC_B\n");
  char ch=0;
  WriteLine("Press ESC key to stop");
+ uint32_t cpt = 0;
  while(TRUE)
    {
      //printf("ch: %c boucle start index: %d\n",ch, g_startIndex);
@@ -753,10 +755,13 @@ void acq_continue()
 	 if (g_trig > 0)
 	   triggeredAt = totalsamples + g_trigAt;
 	 totalsamples += (uint)g_sampleCount;
-	 for(int i=g_startIndex; i< (g_startIndex + g_sampleCount); i++)
-	   fprintf(fi, "%6d,0\n",
+	 for(int i=g_startIndex; i< (g_startIndex + g_sampleCount); i++, cpt++)
+	   fprintf(fi, "%6d,%6d\n",
 		 adc_to_mv(Buffer[0][i],
 			   _unit.channelSettings[PS5000A_CHANNEL_A].range,
+			   &_unit),
+		   adc_to_mv(Buffer[1][i],
+			   _unit.channelSettings[PS5000A_CHANNEL_B].range,
 			   &_unit) );
 	 
        }
