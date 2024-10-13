@@ -163,7 +163,7 @@ void setDefaults(UNIT * unit)
   int32_t i;
 
   status = ps5000aSetEts(unit->handle, PS5000A_ETS_OFF, 0, 0, NULL);					// Turn off hasHardwareETS
-  printf(status?"setDefaults:ps5000aSetEts------ 0x%08lx \n":"", status);
+  printf(status?"setDefaults:ps5000aSetEts------ 0x%08x \n":"", status);
 
   powerStatus = ps5000aCurrentPowerSource(unit->handle);
 
@@ -643,11 +643,10 @@ void StreamingCallback(int16_t handle,
  *  this function demonstrates how to collect a stream of data
  *  from the unit (start collecting immediately)
  ***************************************************************************/
-void acq_continue()
+void acq_continue(uint interval, uint taille, char*fichier)
  {
    short status;
-   uint sampleInterval = 40000;
-   uint taille = 50000 ;
+   uint sampleInterval = interval;
    uint preTrigger = 0;
    uint sampleCount = 100000;
    int nbr_ech = 50000;
@@ -659,9 +658,9 @@ void acq_continue()
    double debut=0, fin, result, sec, hz ;
    setDefaults(&_unit);
    
-   WriteLine("Collect streaming...");
-   WriteLine("Data is written to disk file (stream.txt)");
-   WriteLine("Press a key to start");
+   printf("Collect streaming...\n");
+   printf("Data is written to disk file (%s)\n", fichier);
+   printf("Press a key to start\n");
    while(!getchar())
      {
        fflush(stdin);
@@ -686,7 +685,7 @@ void acq_continue()
  if (status != PICO_OK)
    return ;
  uint32_t sampleRatio = 1; 
-
+ if (!sampleInterval) sampleInterval=4000;
  status = ps5000aRunStreaming(
 			      _unit.handle, 
 			      &sampleInterval, 
@@ -698,14 +697,17 @@ void acq_continue()
 			      PS5000A_RATIO_MODE_NONE,
 			      (int)sampleCount);
  
- printf("status RunStreaming: %d sampleRatio: %ld\n", status, sampleRatio);
+ printf("status RunStreaming: %d sampleRatio: %d sampleInterval: %d\n",
+	status, sampleRatio, sampleInterval);
  if (status==13)
    printf("PICO_INVALID_PARAMETER\n");
- 
- if (status != PICO_OK)
+ if (status==PICO_INVALID_SAMPLE_INTERVAL)
+   printf("PICO_INVALID_SAMPLE_INTERVAL\n");
+ if (status != PICO_OK)     
    return ;
  //WriteLine(status);
- fi = fopen("data.txt", "a");
+ printf("fichier: %s\n",fichier);
+ fi = fopen(fichier, "w");
  fprintf(fi, "ADC_A,ADC_B\n");
  char ch=0;
  WriteLine("Press ESC key to stop");
@@ -724,8 +726,7 @@ void acq_continue()
 				    NULL);
      if (status == PICO_OK)
        {
-	 if (!debut)
-	   debut = GetTimeStamp();
+
 	 //printf("startIndex ok:%d sampleInterval:%d\n",
 	 //	g_startIndex, sampleInterval);
        }
@@ -751,19 +752,20 @@ void acq_continue()
        }
      if (g_ready && g_sampleCount > 0) /* can be ready and have no data, if autoStop has fired */
        {
+	 if (!debut)
+	   debut = GetTimeStamp();
 	 //printf("data ready sampleCount: %d\n", g_sampleCount);
 	 if (g_trig > 0)
 	   triggeredAt = totalsamples + g_trigAt;
 	 totalsamples += (uint)g_sampleCount;
-	 for(int i=g_startIndex; i< (g_startIndex + g_sampleCount); i++, cpt++)
+	 for(int i=g_startIndex; i<(int) (g_startIndex + g_sampleCount); i++, cpt++)
 	   fprintf(fi, "%6d,%6d\n",
 		 adc_to_mv(Buffer[0][i],
 			   _unit.channelSettings[PS5000A_CHANNEL_A].range,
 			   &_unit),
 		   adc_to_mv(Buffer[1][i],
 			   _unit.channelSettings[PS5000A_CHANNEL_B].range,
-			   &_unit) );
-	 
+			   &_unit) );	 
        }
      ch=getchar();
      if (ch == 27)
@@ -773,9 +775,9 @@ void acq_continue()
  fin = GetTimeStamp();
  result = fin - debut ;
  sec = result / 1e9;
- hz = sec ? totalsamples/sec:1;
- printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz %f Mhz\n",
-	totalsamples, debut, fin, result, sec, hz, hz/1e6);
+ hz = sec ? cpt/sec:1;
+ printf("lecture de %d:%d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz %f Mhz\n",
+	totalsamples, cpt, debut, fin, result, sec, hz, hz/1e6);
  printf("STOP\n");
  ps5000aStop(_unit.handle);
  for (int i = g_channelCount;i>0; i--) // delete data buffers
@@ -790,14 +792,46 @@ void acq_continue()
  * main
  *
  ***************************************************************************/
-int32_t main(void)
+int32_t main(int nba, char **args, char **env)
 {
   uint16_t devCount = 0, listIter = 0,	openIter = 0;
+  static uint interval = 200, taille = 100000 ;
   PICO_STATUS status = PICO_OK;
-  UNIT *punit;
-
+  static UNIT *punit;
+  static char fichier[100] = "data.txt" ;
+  printf("PicoScope 5000 Series (ps5000a)\n");
+  printf("%s nba:%d args: %s\n",args[0],nba,args[1]);
   punit = &_unit ;
-
+  if (nba>0)
+    {
+       for (int ia=1;ia<nba;ia++)
+	if (args[ia][0] == '-' && ia+1 < nba)
+	  {
+	    switch(args[ia][1])
+	      {
+	      case 'f':
+		for(int o=0; args[ia+1][o]&&o<99; o++)
+		  {
+		    fichier[o]=args[ia+1][o];
+		    fichier[o+1] = 0;
+		  }
+		printf("fichier de sortie: %s\n", fichier);
+		break;
+	      case 'i': // interval
+		interval=atoi(args[ia+1]);
+		printf("interval entre les lectures: %d\n", interval);
+		break;
+	      case 't': // taille buffer
+		taille = atoi(args[ia+1]);
+		printf("taille des buffers: %d\n", taille);
+		break;
+	      default:
+		printf("%s usage:\n\t-i <interval>\n\t-t <taille buffer>\n\t-f <fichier de sortie>\n", args[0]);
+		break;
+	      }
+	  }
+    }
+  printf("interval: %d taille: %d fichier:%s\n",interval, taille, fichier);
   tcgetattr(0, &info);          /* get current terminal attirbutes; 0 is the file descriptor for stdin */
   info.c_lflag &= ~ICANON;      /* disable canonical mode */
   info.c_cc[VMIN] = 1;          /* wait until at least one keystroke available */
@@ -812,6 +846,7 @@ int32_t main(void)
     }
 
   _unit.openStatus = (int16_t)changePowerSource(_unit.handle, _unit.openStatus, punit);
+
   set_info(punit);
   status = handleDevice(punit);
   if (status != PICO_OK)
@@ -822,9 +857,18 @@ int32_t main(void)
   /****************
    * run
    ****************/
-  status = ps5000aSetDeviceResolution(punit->handle, (PS5000A_DEVICE_RESOLUTION)PS5000A_DR_14BIT);
+  status = ps5000aSetDeviceResolution(punit->handle,
+				      (PS5000A_DEVICE_RESOLUTION)PS5000A_DR_14BIT);
+  if (status!=PICO_OK)
+    printf("setDeviceResolution status: %d\n",status);
+  status = ps5000aSetBandwidthFilter(punit->handle, PS5000A_CHANNEL_A, PS5000A_BW_FULL);
+  if (status!=PICO_OK)
+    printf("setbandwidth status: %d\n",status);
+  status = ps5000aSetBandwidthFilter(punit->handle, PS5000A_CHANNEL_B, PS5000A_BW_FULL);
+  if (status!=PICO_OK)
+    printf("setbandwidth status: %d\n",status);
   displaySettings(punit);
-  acq_continue();
+  acq_continue(interval, taille, fichier);
   closeDevice(punit);
   printf("Exit...\n");
   tcgetattr(0, &info);
