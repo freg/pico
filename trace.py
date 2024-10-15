@@ -13,7 +13,7 @@ from scipy.interpolate import make_interp_spline
 #import pdb; pdb.set_trace()
 
 
-f = pd.read_csv("stream.txt", skiprows=10, nrows=1000)
+f = pd.read_csv("stream.txt", skiprows=10, nrows=2000)
 #f = pd.read_csv("stream.txt") 
 f = f.loc[:, ~f.columns.str.contains('^Unnamed')]
 
@@ -31,9 +31,10 @@ smooth = spl(xnew)
 
 #%% plot
 
+plt.scatter(range(len(f["u_a"])),f["u_a"])
 plt.scatter(range(len(f["u_b"])),f["u_b"])
-# plt.plot(f["u_b"])
-plt.plot(xnew, smooth)
+#plt.plot(f["u_a"], f["u_b"])
+#plt.plot(xnew, smooth)
 #%% conversion dbea
 current_dateTime = datetime.now()
 
