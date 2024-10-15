@@ -72,7 +72,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <time.h>
+//#include <time.h>
 #include <ctype.h>
 #include <libps5000a/ps5000aApi.h>
 #ifndef PICO_STATUS
@@ -501,13 +501,6 @@ PICO_STATUS clearDataBuffers(UNIT * unit)
   return status;
 }
 
-double GetTimeStamp(void)
-{
-  struct timespec start;
-  clock_gettime(CLOCK_REALTIME, &start);
-  return 1e9 * start.tv_sec + start.tv_nsec;        // return ns time stamp
-}
-
 /****************************************************************************
  * streamDataHandler
  * - Used by the two stream data examples - untriggered and triggered
@@ -539,8 +532,6 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
   uint32_t numStreamingValues = 0;
 
   BUFFER_INFO bufferInfo;
-  double debut=0, fin, result, sec, hz=0 ;
-
   
   powerStatus = ps5000aCurrentPowerSource(unit->handle);
 	
@@ -568,8 +559,9 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
     }
 	
   downsampleRatio = 1;
-  timeUnits = PS5000A_US;
-  sampleInterval = 1;
+  //timeUnits = PS5000A_US;
+  timeUnits = PS5000A_NS;
+  sampleInterval = 100;
   ratioMode = PS5000A_RATIO_MODE_NONE;
   preTrigger = 0;
   postTrigger = 1000000;
@@ -620,6 +612,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 	  else
 	    {
 	      printf("streamDataHandler:ps5000aRunStreaming ------ 0x%08lx \n", status);
+	      printf("sampleInterval: %d\n", sampleInterval);
 	      return;
 	    }
 	}
@@ -636,15 +629,11 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
       fprintf(fp,"Streaming Data Log\n\n");
       fprintf(fp,"For each of the %d Channels, results shown are....\n",unit->channelCount);
       fprintf(fp,"Maximum Aggregated value ADC Count & mV, Minimum Aggregated value ADC Count & mV\n\n");
-      fprintf(fp, "Timebase used %lu = %ld ns sample interval\n", timebase, timeInterval);
+      for (j = 0; j < unit->channelCount; j++) 
+	fprintf(fp, "Channel %c range: %d ADC_Max:%d\n", (char)'A'+j,
+		unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit->maxADCValue);
+      fprintf(fp, "Timebase used %lu = %ld ns sample interval %d\n", timebase, timeInterval, sampleInterval);
       fprintf(fp, "Resolution used: 14Bits\n");
-      for (i = 0; i < unit->channelCount; i++) 
-	{
-	  if (unit->channelSettings[i].enabled) 
-	    {
-	      fprintf(fp,"    Ch% cMax ADC    Max mV  Min ADC  Min mV   ", (char)'A'+i);
-	    }
-	}
       fprintf(fp, "\n");
       fprintf(fp, "ADC_A,A_min,ADC_B,B_min\n");
     }
@@ -677,8 +666,6 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 
       if (g_ready && g_sampleCount > 0) /* Can be ready and have no data, if autoStop has fired */
 	{
-	  if (!debut)
-	    debut = GetTimeStamp();
 	  if (g_trig)
 	    {
 	      triggeredAt = totalSamples + g_trigAt;		// Calculate where the trigger occurred in the total samples collected
@@ -732,15 +719,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
     }
 
   printf("\n\n");
-  fin = GetTimeStamp();
-
-  result = fin - debut ;
-  sec = result / 1e9;
-  if (sec) hz = totalSamples/sec;
-  
   ps5000aStop(unit->handle);
-  printf("lecture de %d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz %f Mhz\n",
-	 totalSamples, debut, fin, result, sec, hz, hz/1e6);
   if (fp != NULL)
     {
 
