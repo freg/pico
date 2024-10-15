@@ -4,7 +4,7 @@ Created on Mon Aug  5 18:37:15 2024
 
 @author: flori
 """
-
+from datetime import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,7 +13,7 @@ from scipy.interpolate import make_interp_spline
 #import pdb; pdb.set_trace()
 
 
-f = pd.read_csv("stream.txt", skiprows=8, nrows=1000)
+f = pd.read_csv("stream.txt", skiprows=10, nrows=1000)
 #f = pd.read_csv("stream.txt") 
 f = f.loc[:, ~f.columns.str.contains('^Unnamed')]
 
@@ -30,10 +30,15 @@ spl = make_interp_spline(idx, f["u_b"], k=3)
 smooth = spl(xnew)
 
 #%% plot
+
 plt.scatter(range(len(f["u_b"])),f["u_b"])
 # plt.plot(f["u_b"])
 plt.plot(xnew, smooth)
 #%% conversion dbea
+current_dateTime = datetime.now()
+
+plt.title("picoscope %s"%current_dateTime)
+plt.show()
 
 db = 25
 u = (10**(db/20)) * 1e-6
