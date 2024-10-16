@@ -37,9 +37,15 @@ plt.scatter(range(len(f["u_b"])),f["u_b"])
 #plt.plot(xnew, smooth)
 #%% conversion dbea
 current_dateTime = datetime.now()
-
-plt.title("picoscope %s"%current_dateTime)
+fi = open("stream.txt", "r")
+if fi:
+    line = fi.readline()
+    line = fi.readline()
+    if len(line)>0:
+        plt.title(line)
+    fi.close()
+else:
+    plt.title("picoscope %s"%current_dateTime)
 plt.show()
-
 db = 25
 u = (10**(db/20)) * 1e-6
