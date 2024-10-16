@@ -72,7 +72,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
-//#include <time.h>
+#include <time.h>
 #include <ctype.h>
 #include <libps5000a/ps5000aApi.h>
 #ifndef PICO_STATUS
@@ -85,7 +85,12 @@
 #define memcpy_s(a,b,c,d) memcpy(a,c,d)
 
 typedef enum enBOOL{FALSE,TRUE} BOOL;
-
+double GetTimeStamp(void)
+{
+  struct timespec start;
+  clock_gettime(CLOCK_REALTIME, &start);
+  return 1e9 * start.tv_sec + start.tv_nsec;        // return ns time stamp
+}
 /* A function to detect a keyboard press on Linux */
 int32_t _getch()
 {
@@ -520,7 +525,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
   PICO_STATUS powerStatus;
   uint32_t sampleInterval;
   int32_t index = 0;
-  int32_t totalSamples;
+  int32_t totalSamples = 0, id = 0; // compteurs
   uint32_t postTrigger;
   int16_t autostop;
   uint32_t downsampleRatio;
@@ -628,14 +633,14 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
     {
       fprintf(fp,"Streaming Data Log\n\n");
       fprintf(fp,"For each of the %d Channels, results shown are....\n",unit->channelCount);
-      fprintf(fp,"Maximum Aggregated value ADC Count & mV, Minimum Aggregated value ADC Count & mV\n\n");
+      fprintf(fp,"ADC & mV\n\n");
       for (j = 0; j < unit->channelCount; j++) 
 	fprintf(fp, "Channel %c range: %d ADC_Max:%d\n", (char)'A'+j,
 		unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit->maxADCValue);
       fprintf(fp, "Timebase used %lu = %ld ns sample interval %d\n", timebase, timeInterval, sampleInterval);
       fprintf(fp, "Resolution used: 14Bits\n");
       fprintf(fp, "\n");
-      fprintf(fp, "ADC_A,A_min,ADC_B,B_min\n");
+      fprintf(fp, "id,ADC_A,ADC_B,ts\n");
     }
 	
 
@@ -685,29 +690,16 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 				
 	      if (fp != NULL)
 		{
+		  fprintf(fp, "%d", id++);
 		  for (j = 0; j < unit->channelCount; j++) 
 		    {
 		      if (unit->channelSettings[j].enabled) 
 			{
-			  fprintf(	fp,
-					j>0?",%d,%d":"%d,%d", // ternaire: ajoute la virgule au second canal
-					
-					appBuffers[j * 2][i],
-					
-					appBuffers[j * 2 + 1][i]);
-			  
-			  /*fprintf(	fp,
-								"Ch%C  %6d = %+6dmV, %6d = %+6dmV   ",
-								'A' + j,
-								buffers[j * 2][i],
-								adc_to_mv(buffers[j * 2][i], unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit),
-								buffers[j * 2 + 1][i],
-								adc_to_mv(buffers[j * 2 + 1][i], unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit));		*/
-			  
+			  fprintf(fp, ",%d", appBuffers[j * 2][i]);
 			}
 		    }
 
-		  fprintf(fp, "\n");
+		  fprintf(fp, ",%f\n", GetTimeStamp());
 		}
 	      else
 		{
