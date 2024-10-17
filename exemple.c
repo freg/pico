@@ -698,7 +698,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 			    fprintf(fp, "%d", appBuffers[j * 2][i]);
 			}
 		    }
-		  if (cpt_ts++%TS_INTERVAL)
+		  if (!cpt_ts++%TS_INTERVAL)
 		    fprintf(fp, ",%f\n", GetTimeStamp());
 		  else
 		    fprintf(fp, ",\n");
