@@ -84,7 +84,6 @@
 #define scanf_s scanf
 #define fscanf_s fscanf
 #define memcpy_s(a,b,c,d) memcpy(a,c,d)
-#define TS_INTERVAL 100000
 typedef enum enBOOL{FALSE,TRUE} BOOL;
 double GetTimeStamp(void)
 {
@@ -635,7 +634,6 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
       fprintf(fp,"Streaming Data Log\n\n");
       fprintf(fp,"For each of the %d Channels, results shown are....\n",unit->channelCount);
       fprintf(fp,"ADC raw, conversion in mv: raw * range(A:%d,B:%d) / maxADCValue(%d)\n\n", unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit->channelSettings[PS5000A_CHANNEL_B + j].range, unit->maxADCValue);
-      fprintf(fp,"Timestamp updated every %d lines\n", TS_INTERVAL);
       for (j = 0; j < unit->channelCount; j++) 
 	fprintf(fp, "Channel %c range: %d ADC_Max:%d\n", (char)'A'+j,
 		unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit->maxADCValue);
@@ -698,10 +696,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 			    fprintf(fp, "%d", appBuffers[j * 2][i]);
 			}
 		    }
-		  if (!cpt_ts++%TS_INTERVAL)
-		    fprintf(fp, ",%f\n", GetTimeStamp());
-		  else
-		    fprintf(fp, ",\n");
+		  fprintf(fp,"\n");
 		}
 	      else
 		{
