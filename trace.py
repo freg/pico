@@ -30,7 +30,7 @@ spl = make_interp_spline(idx, f["u_b"], k=3)
 smooth = spl(xnew)
 
 #%% plot
-
+plt.figure(100)
 plt.scatter(range(len(f["u_a"])),f["u_a"])
 plt.scatter(range(len(f["u_b"])),f["u_b"])
 #plt.plot(f["u_a"], f["u_b"])
@@ -45,7 +45,21 @@ if fi:
         plt.title(line)
     fi.close()
 else:
-    plt.title("picoscope %s"%current_dateTime)
+    plt.title("picoscope %s"%current_dateTime)  
 plt.show()
+plt.figure(200)
+plt.plot(f['ts'], f['u_a'])
+plt.xlabel('Timestamp')
+plt.ylabel('ADC_A')
+plt.title('Plot of Date vs Value')
+plt.show()
+plt.figure(300)
+plt.plot(f['id'], f['u_a']) 
+plt.plot(f['id'], f['u_b'])
+plt.xlabel('ID')
+plt.ylabel('ADC_A')
+plt.title('Plot of Date vs Value')
+plt.show()
+
 db = 25
 u = (10**(db/20)) * 1e-6
