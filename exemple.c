@@ -1,6 +1,7 @@
 /*******************************************************************************
  *
- * Filename: ps5000aCon.c
+ * Filename: exemple.c from ps5000aCon.c
+ * gcc exemple.c -g -o exe -lm -lps5000a  -Wno-format -Wl,-s  -u,pthread_atfork -L/opt/picoscope/lib -I/opt/picoscope/include
  *
  * Description:
  *   This is a console mode program that demonstrates how to use some of 
@@ -83,7 +84,7 @@
 #define scanf_s scanf
 #define fscanf_s fscanf
 #define memcpy_s(a,b,c,d) memcpy(a,c,d)
-
+#define TS_INTERVAL 100000
 typedef enum enBOOL{FALSE,TRUE} BOOL;
 double GetTimeStamp(void)
 {
@@ -626,21 +627,22 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 
   printf("Streaming data...Press a key to stop\n");
 
-	
+  uint cpt_ts = 0;
   fopen_s(&fp, streamFile, "w");
 
   if (fp != NULL)
     {
       fprintf(fp,"Streaming Data Log\n\n");
       fprintf(fp,"For each of the %d Channels, results shown are....\n",unit->channelCount);
-      fprintf(fp,"ADC & mV\n\n");
+      fprintf(fp,"ADC raw, conversion in mv: raw * range(A:%d,B:%d) / maxADCValue(%d)\n\n", unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit->channelSettings[PS5000A_CHANNEL_B + j].range, unit->maxADCValue);
+      fprintf(fp,"Timestamp updated every %d lines\n", TS_INTERVAL);
       for (j = 0; j < unit->channelCount; j++) 
 	fprintf(fp, "Channel %c range: %d ADC_Max:%d\n", (char)'A'+j,
 		unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit->maxADCValue);
-      fprintf(fp, "Timebase used %lu = %ld ns sample interval %d\n", timebase, timeInterval, sampleInterval);
+      fprintf(fp, "Timebase used %d = %d ns sample interval %d\n", timebase, timeInterval, sampleInterval);
       fprintf(fp, "Resolution used: 14Bits\n");
       fprintf(fp, "\n");
-      fprintf(fp, "id,ADC_A,ADC_B,ts\n");
+      fprintf(fp, "ADC_A,ADC_B,ts\n");
     }
 	
 
@@ -667,8 +669,6 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 	  powerChange = 1;
 	}
 
-      index ++;
-
       if (g_ready && g_sampleCount > 0) /* Can be ready and have no data, if autoStop has fired */
 	{
 	  if (g_trig)
@@ -676,9 +676,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 	      triggeredAt = totalSamples + g_trigAt;		// Calculate where the trigger occurred in the total samples collected
 	    }
 
-	  totalSamples += g_sampleCount;
-	  //printf("\nCollected %3li samples, index = %5lu, Total: %6d samples ", g_sampleCount, g_startIndex, totalSamples);
-			
+	  totalSamples += g_sampleCount;			
 	  if (g_trig)
 	    {
 	      printf("Trig. at index %lu total %lu", g_trigAt, triggeredAt + 1);	// show where trigger occurred
@@ -690,16 +688,20 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 				
 	      if (fp != NULL)
 		{
-		  fprintf(fp, "%d", id++);
 		  for (j = 0; j < unit->channelCount; j++) 
 		    {
 		      if (unit->channelSettings[j].enabled) 
 			{
-			  fprintf(fp, ",%d", appBuffers[j * 2][i]);
+			  if (j)
+			    fprintf(fp, ",%d", appBuffers[j * 2][i]);
+			  else
+			    fprintf(fp, "%d", appBuffers[j * 2][i]);
 			}
 		    }
-
-		  fprintf(fp, ",%f\n", GetTimeStamp());
+		  if (cpt_ts++%TS_INTERVAL)
+		    fprintf(fp, ",%f\n", GetTimeStamp());
+		  else
+		    fprintf(fp, ",\n");
 		}
 	      else
 		{
