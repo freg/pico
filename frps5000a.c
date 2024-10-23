@@ -604,65 +604,25 @@ double GetTimeStamp(void)
   return 1e9 * start.tv_sec + start.tv_nsec;        // return ns time stamp
 }
 
-/****************************************************************************
-* Callback
-* used by ps5000a data block collection calls, on receipt of data.
-* used to set global flags etc checked by user routines
-****************************************************************************/
-void PREF4 callBackBlock( int16_t handle, PICO_STATUS status, void * pParameter)
-{
-  if (status != PICO_CANCELLED)
-    {
-      g_ready = TRUE;
-    }
-  printf("callBackBlock status:%d\n",status);
-  if (status == PICO_OK)
-    {
-      int16_t * buffers[2];
-      int16_t over=0;
-      int32_t no=1,nbval=0;
-      UNIT * unit = *(UNIT**)pParameter;
-      FILE *fi;
-      buffers[0] = (int16_t*) calloc(10000, sizeof(int16_t));
-      status = ps5000aSetDataBuffer(handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A, buffers[0], 10000, 0, 0);
-      printf("setdatabuffer status:%d\n",status);
-      status = ps5000aGetValues(handle, PS5000A_CHANNEL_A, &no, 0, 0, 1000, &over);
-      printf("getValues status: %d\n",status);
-      if (status==PICO_OK)
-	{
-	  fi = fopen("data.txt", "a");
-	  for(int i=0; i<1000; i++)
-	    {
-	      nbval++;
-	      
-	      fprintf(fi, "ADC_A,%6d\n",
-		      adc_to_mv(buffers[0][i],
-				unit->channelSettings[PS5000A_CHANNEL_A].range,
-				unit) );
-	    }
-	  fclose(fi);
-	}
-    }
-      
-}
 void collectRawFr(UNIT *unit, int taille, int npages)
 {
-int16_t status, over=0;
-  int32_t no=1;
-  int16_t * buffers[2 * PS5000A_MAX_CHANNELS];
-#define TBUF 2000
+  int16_t status, over=0;
+  int32_t no=taille;
+  int16_t * buffers[2];// * PS5000A_MAX_CHANNELS];
+
 #define NBPAGES 1000
   FILE * fi;
   double debut, fin, result, sec, hz ;
   fi = fopen("data.txt", "a");
   printf("Lancement de l'acquisition sur un buffer de %d et %d pages\n", taille, NBPAGES);
   ps5000aStop(unit->handle);
-  ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A, &buffers, TBUF, 1, 0);
+  status = ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_A , buffers[0], taille, 1, 0);
+  status = ps5000aSetDataBuffer(unit->handle, PS5000A_CHANNEL_B , buffers[1], taille, 1, 0);
   debut = GetTimeStamp();
   int nbval=0;
   for (int ib=0; ib<npages; ib++)
     {
-      status = ps5000aGetValues(unit->handle, PS5000A_CHANNEL_A, &no, 0, 0, taille, &over);
+      status = ps5000aGetValues(unit->handle, 1, &no, 0, 0, taille, &over);
 
       for(int i=0; i<taille; i++)
 	{
