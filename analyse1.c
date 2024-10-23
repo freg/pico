@@ -25,7 +25,7 @@ int change_signe(int d2, int d3)
 }
 int passage_a_zero(int fi, int fo, int16_t**data)
 {
-  int16_t d1, d2, maxd=0,mind=0;
+  static int16_t d1, d2, maxd=0,mind=0;
   static char*c,*dl,*buff = NULL;
   static int32_t gnligne=0,nligne=0, dpz=0, dpcs=0; // compteur, derniere position du zero, der changement de sens
   short ok=0,sens=0,lsens=0; // fin entete et sens de la courbe -1 decroit 1 croit
@@ -67,12 +67,21 @@ int passage_a_zero(int fi, int fo, int16_t**data)
 	      sscanf(dl, "%hd,%hd", &data[0][nligne-1], &data[1][nligne-1]);
 	      if (data[0][nligne-1]>d2) sens = 1;
 	      if (data[0][nligne-1]<d2) sens = -1;
+	      if (sens==1 && maxd<data[0][nligne-1])
+		maxd = data[0][nligne-1] ;
+	      else
+		if (sens==-1 && mind>data[0][nligne-1])
+		  mind = data[0][nligne-1] ;
+	      
 	      if (nligne>2 && change_signe(d2,data[0][nligne-1]))
 		{
 		  char tbuf[200];
-		  sprintf(tbuf, "%d,%d,%hd,%d,%d,%hd\n",gnligne,nligne-dpz,sens,d1,d2,data[0][nligne-1]);
+		  sprintf(tbuf, "%d,%d,%hd,%d,%d,%d,%d,%hd\n",gnligne,nligne-dpz,sens,mind,maxd,d1,d2,data[0][nligne-1]);
 		  write(fo,tbuf,strlen(tbuf));
 		  dpz = nligne ;
+		  if (sens==1) maxd = 0;
+		  else
+		    if (sens==-1) mind = 0;
 		}
 	      d1=d2;
 	      d2=data[0][nligne-1];
@@ -106,7 +115,7 @@ int main(int nba, char ** args, char ** env)
     {
       printf("%s\n",strerror(errno));
     }
-  char tbuf[] = "Analyse/parcours des données stream.txt\ntrace des changements de signe\nLigne,Decalage,Sens,data-2,data-1,data";
+  char tbuf[] = "Analyse/parcours des données stream.txt\ntrace des changements de signe\nLigne,Decalage,Sens,min,max,data-2,data-1,data\n";
   write(fo,tbuf,strlen(tbuf));
   while(passage_a_zero(fi, fo, data));
   close(fo);
