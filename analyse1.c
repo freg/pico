@@ -27,7 +27,7 @@ int passage_a_zero(int fi, int fo, int16_t**data)
 {
   int16_t d1, d2, maxd=0,mind=0;
   static char*c,*dl,*buff = NULL;
-  static int32_t nligne=0, dpz=0, dpcs=0; // compteur, derniere position du zero, der changement de sens
+  static int32_t gnligne=0,nligne=0, dpz=0, dpcs=0; // compteur, derniere position du zero, der changement de sens
   short ok=0,sens=0,lsens=0; // fin entete et sens de la courbe -1 decroit 1 croit
   static short entete = 0; // entente passee ou pas
   if (!buff) { buff =  calloc(DATASZ+1, sizeof(char)); printf("alloc\n"); }
@@ -40,6 +40,7 @@ int passage_a_zero(int fi, int fo, int16_t**data)
   buff[DATASZ] = 0;
   c=buff;
   dl = c;
+  nligne=0;
   while(c&&*c)
     {
       switch (*c)
@@ -50,6 +51,7 @@ int passage_a_zero(int fi, int fo, int16_t**data)
 	  break;
 	case '\n':
 	  nligne++;
+	  gnligne++;
 	  if (!entete && !ok && nligne == 11) // passe l'entete
 	    {
 	      if (!strncmp(dl,"ADC_A,ADC_B",11))
@@ -57,7 +59,7 @@ int passage_a_zero(int fi, int fo, int16_t**data)
 		  ok = 1;
 		  entete = 1;
 		}
-	      nligne = 0;
+	      nligne = gnligne = 0;
 	    }
 	  else
 	    if (ok||entete)
@@ -68,7 +70,7 @@ int passage_a_zero(int fi, int fo, int16_t**data)
 	      if (nligne>2 && change_signe(d2,data[0][nligne-1]))
 		{
 		  char tbuf[200];
-		  sprintf(tbuf, "%d,%d,%hd,%d,%d,%hd\n",nligne,nligne-dpz,sens,d1,d2,data[0][nligne-1]);
+		  sprintf(tbuf, "%d,%d,%hd,%d,%d,%hd\n",gnligne,nligne-dpz,sens,d1,d2,data[0][nligne-1]);
 		  write(fo,tbuf,strlen(tbuf));
 		  dpz = nligne ;
 		}
@@ -81,7 +83,7 @@ int passage_a_zero(int fi, int fo, int16_t**data)
       
       c++;
     }
-  printf("fin de passage... ligne:%d\n",nligne);
+  printf("fin de passage... ligne:%d\n",gnligne);
   return 1;
 }
 
