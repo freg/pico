@@ -25,12 +25,18 @@ int change_signe(int d2, int d3)
 }
 int passage_a_zero(int fi, int fo, int16_t**data)
 {
-  static int16_t d1, d2, maxd=0,mind=0;
-  static char*c,*dl,*buff = NULL;
-  static int32_t gnligne=0,nligne=0, dpz=0, dpcs=0; // compteur, derniere position du zero, der changement de sens
+  static int16_t d1, d2,
+    maxd=0,mind=0,
+    derpositionl=0; // pour se remettre en debut de ligne au prochain read
+  static char*c,*dl, // caractère courant et premier caractère de la ligne
+    *buff = NULL;
+  static long positionfic = 0; //position dans le fichier lseek
+  static long gnligne=0,nligne=0, dpz=0, dpcs=0; // compteur, derniere position du zero, der changement de sens
   short ok=0,sens=0,lsens=0; // fin entete et sens de la courbe -1 decroit 1 croit
   static short entete = 0; // entente passee ou pas
   if (!buff) { buff =  calloc(DATASZ+1, sizeof(char)); printf("alloc\n"); }
+  if (derpositionl) // retour en debut de ligne
+    lseek(fi,-derpositionl,SEEK_CUR);
   if (read(fi,buff,DATASZ)<1)
     {
       printf("%s\n",strerror(errno));
@@ -76,12 +82,16 @@ int passage_a_zero(int fi, int fo, int16_t**data)
 	      if (nligne>2 && change_signe(d2,data[0][nligne-1]))
 		{
 		  char tbuf[200];
-		  sprintf(tbuf, "%d,%d,%hd,%d,%d,%d,%d,%hd\n",gnligne,nligne-dpz,sens,mind,maxd,d1,d2,data[0][nligne-1]);
+		  sprintf(tbuf, "%ld,%ld,%ld,%hd,%d,%d,%d,%d,%hd\n",gnligne,nligne-dpz,
+			  positionfic+c-buff,sens,mind,maxd,d1,d2,data[0][nligne-1]);
 		  write(fo,tbuf,strlen(tbuf));
+		  
 		  dpz = nligne ;
-		  if (sens==1) maxd = 0;
+		  if (sens==1)
+		    maxd = 0;
 		  else
-		    if (sens==-1) mind = 0;
+		    if (sens==-1)
+		      mind = 0;
 		}
 	      d1=d2;
 	      d2=data[0][nligne-1];
@@ -92,7 +102,9 @@ int passage_a_zero(int fi, int fo, int16_t**data)
       
       c++;
     }
-  printf("fin de passage... ligne:%d\n",gnligne);
+  positionfic+=DATASZ;
+  derpositionl = c-dl;
+  printf("fin de passage... ligne:%ld, pos:%ld, decl:%d\n",gnligne,positionfic,derpositionl);
   return 1;
 }
 
@@ -115,7 +127,7 @@ int main(int nba, char ** args, char ** env)
     {
       printf("%s\n",strerror(errno));
     }
-  char tbuf[] = "Analyse/parcours des données stream.txt\ntrace des changements de signe\nLigne,Decalage,Sens,min,max,data-2,data-1,data\n";
+  char tbuf[] = "Analyse/parcours des données stream.txt\ntrace des changements de signe\nLigne,Decalage,PositionFi,Sens,min,max,data-2,data-1,data\n";
   write(fo,tbuf,strlen(tbuf));
   while(passage_a_zero(fi, fo, data));
   close(fo);
