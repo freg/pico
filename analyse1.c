@@ -82,6 +82,11 @@ int passage_a_zero(int fi, int fo, int16_t**data)
 	      if (nligne>2 && change_signe(d2,data[0][nligne-1]))
 		{
 		  char tbuf[200];
+		  if (nligne-dpz<0)
+		    {
+		      printf("Erreur décalage négatif: ligne: %ld nligne: %ld dpz: %ld dec: %ld\n",
+			     gnligne, nligne, dpz, nligne-dpz);
+		    }
 		  sprintf(tbuf, "%ld,%ld,%ld,%hd,%d,%d,%d,%d,%hd\n",gnligne,nligne-dpz,
 			  positionfic+c-buff,sens,mind,maxd,d1,d2,data[0][nligne-1]);
 		  write(fo,tbuf,strlen(tbuf));
@@ -102,8 +107,10 @@ int passage_a_zero(int fi, int fo, int16_t**data)
       
       c++;
     }
+  
   positionfic+=DATASZ;
   derpositionl = c-dl;
+  dpz -= nligne;
   printf("fin de passage... ligne:%ld, pos:%ld, decl:%d\n",gnligne,positionfic,derpositionl);
   return 1;
 }
