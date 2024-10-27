@@ -23,7 +23,7 @@ int change_signe(int d2, int d3)
   if (d2*d3 < 0) return 1;
   return 0;
 }
-int passage_a_zero(int fi, int fo, int16_t**data)
+int passage_a_zero(int fi, int fo, int16_t**data, int32_t sifi)
 {
   static int16_t d1, d2,
     maxd=0,mind=0,
@@ -58,14 +58,20 @@ int passage_a_zero(int fi, int fo, int16_t**data)
 	case '\n':
 	  nligne++;
 	  gnligne++;
-	  if (!entete && !ok && nligne == 11) // passe l'entete
+	  if (!entete && !ok) // passe l'entete
 	    {
+	      printf("cherche l'entete %ld\n",nligne);
 	      if (!strncmp(dl,"ADC_A,ADC_B",11))
 		{
 		  ok = 1;
 		  entete = 1;
 		}
 	      nligne = gnligne = 0;
+	      if (nligne > 50)
+		{
+		  printf("nada\n");
+		  return 0;
+		}
 	    }
 	  else
 	    if (ok||entete)
@@ -111,7 +117,9 @@ int passage_a_zero(int fi, int fo, int16_t**data)
   positionfic+=DATASZ;
   derpositionl = c-dl;
   dpz -= nligne;
-  printf("fin de passage... ligne:%ld, pos:%ld, decl:%d\n",gnligne,positionfic,derpositionl);
+  printf("fin de passage... ligne:%ld, pos:%ld, decl:%d\n",gnligne,sifi-positionfic,derpositionl);
+  if (positionfic>=sifi-derpositionl) // évite de boucler sur la dernière ligne
+    return 0;
   return 1;
 }
 
@@ -136,7 +144,7 @@ int main(int nba, char ** args, char ** env)
     }
   char tbuf[] = "Analyse/parcours des données stream.txt\ntrace des changements de signe\nLigne,Decalage,PositionFi,Sens,min,max,data-2,data-1,data\n";
   write(fo,tbuf,strlen(tbuf));
-  while(passage_a_zero(fi, fo, data));
+  while(passage_a_zero(fi, fo, data, fdatasz));
   close(fo);
   close(fi);
 }
