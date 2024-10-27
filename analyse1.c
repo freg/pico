@@ -117,7 +117,7 @@ int passage_a_zero(int fi, int fo, int16_t**data, int32_t sifi)
   positionfic+=DATASZ;
   derpositionl = c-dl;
   dpz -= nligne;
-  printf("fin de passage... ligne:%ld, pos:%ld, decl:%d\n",gnligne,sifi-positionfic,derpositionl);
+  printf("fin de passage... ligne:%ld, reste:%ld, decl:%d\n",gnligne,sifi-positionfic,derpositionl);
   if (positionfic>=sifi-derpositionl) // évite de boucler sur la dernière ligne
     return 0;
   return 1;
