@@ -535,9 +535,10 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
   int16_t retry = 0;
   int16_t powerChange = 0;
   uint32_t numStreamingValues = 0;
-
+  uint cpt_ts = 0;
+  double startts, endts;
   BUFFER_INFO bufferInfo;
-  
+
   powerStatus = ps5000aCurrentPowerSource(unit->handle);
 	
   for (i = 0; i < unit->channelCount; i++) 
@@ -566,7 +567,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
   downsampleRatio = 1;
   //timeUnits = PS5000A_US;
   timeUnits = PS5000A_NS;
-  sampleInterval = 100;
+  sampleInterval = 50;
   ratioMode = PS5000A_RATIO_MODE_NONE;
   preTrigger = 0;
   postTrigger = 1000000;
@@ -575,28 +576,8 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
   bufferInfo.unit = unit;	
   bufferInfo.driverBuffers = buffers;
   bufferInfo.appBuffers = appBuffers;
-
-  if (autostop)
-    {
-      printf("\nStreaming Data for %lu samples", postTrigger / downsampleRatio);
-		
-      if (preTrigger)	// We pass 0 for preTrigger if we're not setting up a trigger
-	{
-	  printf(" after the trigger occurs\nNote: %lu Pre Trigger samples before Trigger arms\n\n",preTrigger / downsampleRatio);
-	}
-      else
-	{
-	  printf("\n\n");
-	}
-    }
-  else
-    {
-      printf("\nStreaming Data continually.\n\n");
-    }
-
+  printf("\nStreaming Data continually.\n\n");
   g_autoStopped = FALSE;
-
-
   do
     {
       retry = 0;
@@ -623,15 +604,13 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 	}
     }
   while (retry);
-
+  startts = GetTimeStamp();
   printf("Streaming data...Press a key to stop\n");
-
-  uint cpt_ts = 0;
   fopen_s(&fp, streamFile, "w");
 
   if (fp != NULL)
     {
-      fprintf(fp,"Streaming Data Log\n\n");
+      fprintf(fp,"Streaming Data Log       <ts positions>                                                           \n\n");
       fprintf(fp,"For each of the %d Channels, results shown are....\n",unit->channelCount);
       fprintf(fp,"ADC raw, conversion in mv: raw * range(A:%d,B:%d) / maxADCValue(%d)\n\n", unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit->channelSettings[PS5000A_CHANNEL_B + j].range, unit->maxADCValue);
       for (j = 0; j < unit->channelCount; j++) 
@@ -640,7 +619,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
       fprintf(fp, "Timebase used %d = %d ns sample interval %d\n", timebase, timeInterval, sampleInterval);
       fprintf(fp, "Resolution used: 14Bits\n");
       fprintf(fp, "\n");
-      fprintf(fp, "ADC_A,ADC_B,ts\n");
+      fprintf(fp, "ADC_A,ADC_B\n");
     }
 	
 
@@ -709,22 +688,20 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
 
   printf("\n\n");
   ps5000aStop(unit->handle);
+  endts = GetTimeStamp();
+  int seek = fseek(fp, 23, SEEK_SET);
+  printf("fseek %d \n", seek);
+  fprintf(fp, " ts %f->%f ", startts, endts);
+  fseek(fp, 0, SEEK_END);
+  
   if (fp != NULL)
     {
 
       fclose (fp);
     }
 
-  if (!g_autoStopped && !powerChange)  
-    {
-      printf("\nData collection aborted\n");
-      _getch();
-    }
-  else
-    {
-      printf("\nData collection complete.\n\n");
-    }
-	
+  printf("\nData collection aborted\n");
+  	
   for (i = 0; i < unit->channelCount; i++) 
     {
       if(unit->channelSettings[i].enabled)
@@ -1093,7 +1070,7 @@ void setTimebase(UNIT * unit, int entree)
 	
   // Find the shortest possible timebase and inform the user.
   status = ps5000aGetMinimumTimebaseStateless(unit->handle, enabledChannelOrPortFlags, &shortestTimebase, &timeIntervalSeconds, unit->resolution);
-
+  printf("Shortest timebase: %d timeintervalSeconds: %f\n", shortestTimebase, timeIntervalSeconds);
   if (status != PICO_OK)
     {
       printf("setTimebase:ps5000aGetMinimumTimebaseStateless ------ 0x%08lx \n", status);
