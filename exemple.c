@@ -60,12 +60,6 @@
 
 #include <stdio.h>
 
-/* Headers for Windows */
-#ifdef _WIN32
-#include "windows.h"
-#include <conio.h>
-#include "ps5000aApi.h"
-#else
 #include <sys/types.h>
 #include <string.h>
 #include <termios.h>
@@ -139,7 +133,7 @@ int32_t fopen_s(FILE ** a, const int8_t * b, const int8_t * c)
 /* A function to get a single character on Linux */
 #define max(a,b) ((a) > (b) ? a : b)
 #define min(a,b) ((a) < (b) ? a : b)
-#endif
+
 
 int32_t cycles = 0;
 
