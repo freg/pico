@@ -1064,7 +1064,7 @@ void setTimebase(UNIT * unit, int entree)
 	
   // Find the shortest possible timebase and inform the user.
   status = ps5000aGetMinimumTimebaseStateless(unit->handle, enabledChannelOrPortFlags, &shortestTimebase, &timeIntervalSeconds, unit->resolution);
-  printf("Shortest timebase: %d timeintervalSeconds: %f\n", shortestTimebase, timeIntervalSeconds);
+  
   if (status != PICO_OK)
     {
       printf("setTimebase:ps5000aGetMinimumTimebaseStateless ------ 0x%08lx \n", status);
