@@ -1252,8 +1252,6 @@ void collectStreamingImmediate(UNIT * unit)
 
   printf("Collect streaming...\n");
   printf("Data is written to disk file (stream.txt)\n");
-  printf("Press a key to start\n");
-  _getch();
 
   /* Trigger disabled	*/
   status = ps5000aSetSimpleTrigger(unit->handle, 0, PS5000A_CHANNEL_A, 0, PS5000A_RISING, 0, 0);
