@@ -16,8 +16,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 
-
+double GetTimeStamp(void)
+{
+  struct timespec start;
+  clock_gettime(CLOCK_REALTIME, &start);
+  return 1e9 * start.tv_sec + start.tv_nsec;        // return ns time stamp
+}
 int change_signe(int d2, int d3)
 {
   if (d2*d3 < 0) return 1;
@@ -158,7 +164,10 @@ int main(int nba, char ** args, char ** env)
   char nfier[200] = "errana.txt" ;
   int fi,fo,fer;
   int16_t * data[2];
-  long fdatasz ; 
+  long fdatasz ;
+  double startts, endts;
+  char tbuf[200];
+  startts = GetTimeStamp();
   data[0] = (int16_t*) calloc(DATASZ, sizeof(int16_t));
   data[1] = (int16_t*) calloc(DATASZ, sizeof(int16_t));
   fi = open(nfiin, O_RDONLY);
@@ -176,9 +185,13 @@ int main(int nba, char ** args, char ** env)
     {
       printf("%s:%s\n",nfier,strerror(errno));
     }
-  char tbuf[] = "Analyse/parcours des données stream.txt\ntrace des changements de signe\nLigne,Decalage,PositionFi,Sens,min,max,data-2,data-1,data\n";
+  sprintf(tbuf,"Analyse/parcours des données stream.txt\ntrace des changements de signe\nLigne,Decalage,PositionFi,Sens,min,max,data-2,data-1,data\n");
   write(fo,tbuf,strlen(tbuf));
   while(passage_a_zero(fi, fo, fer, data, fdatasz));
+  endts = GetTimeStamp();
+  sprintf(tbuf,"timestamp debut:%f fin:%f\n", startts, endts);
+  write(fo,tbuf,strlen(tbuf));
+  write(fer,tbuf,strlen(tbuf));
   close(fer);
   close(fo);
   close(fi);
