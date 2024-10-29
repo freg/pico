@@ -23,7 +23,7 @@ int change_signe(int d2, int d3)
   if (d2*d3 < 0) return 1;
   return 0;
 }
-int passage_a_zero(int fi, int fo, int16_t**data, int32_t sifi)
+int passage_a_zero(int fi, int fo, int16_t**data, long sifi)
 {
   static int16_t d1, d2,
     maxd=0,mind=0,
@@ -119,7 +119,11 @@ int passage_a_zero(int fi, int fo, int16_t**data, int32_t sifi)
   dpz -= nligne;
   printf("fin de passage... ligne:%ld, reste:%ld, decl:%d\n",gnligne,sifi-positionfic,derpositionl);
   if (positionfic>=sifi-derpositionl) // évite de boucler sur la dernière ligne
-    return 0;
+    {
+      printf("sortie sur dépassement: pfic: %ld filesz: %ld derligne: %d\n",
+	     positionfic, sifi, derpositionl);
+      return 0;
+    }
   return 1;
 }
 
@@ -137,7 +141,7 @@ int main(int nba, char ** args, char ** env)
   fdatasz = lseek (fi, (size_t)0, SEEK_END); // va à la fin
   printf("DataFile size: %ld\n", fdatasz);
   lseek(fi, (size_t)0, SEEK_SET); // remise au début
-  fo = open(nfiout, O_CREAT|O_WRONLY|O_TRUNC, 666);
+  fo = open(nfiout, O_CREAT|O_WRONLY|O_TRUNC, 0666);
   if (fo==-1)
     {
       printf("%s\n",strerror(errno));
