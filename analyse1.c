@@ -41,6 +41,7 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
   
   static long positionfic = 0; //position dans le fichier lseek
   static long gnligne=0,nligne=0, dpz=0, dpcs=0, difl=0; // compteur, derniere position du zero, der changement de sens
+  static long nbpz=0, nblp=0, nbcp=0, gfnligne=0;
   short ok=0,sens=0,lsens=0; // fin entete et sens de la courbe -1 decroit 1 croit
   static short entete = 0; // entente passee ou pas
   if (!buff) { buff =  calloc(DATASZ+1, sizeof(char)); printf("alloc\n"); }
@@ -97,6 +98,7 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 	      if (nligne>2 && change_signe(d2,data[0][nligne-1]))
 		{
 		  difl = nligne-dpz ;
+		  nbpz++;
 		if (difl<0)
 		    {
 		      printf("Erreur décalage négatif: ligne: %ld nligne: %ld dpz: %ld dec: %ld\n",
@@ -110,6 +112,7 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 		      sprintf(tbuf, "demi periode courte: dper=%ld, ligne=%ld, passage=%ld\n",
 			      difl, gnligne, dpz);
 		      write(fer, tbuf, strlen(tbuf));
+		      nbcp++;
 		    }
 		  else
 		    if (difl > 1060)
@@ -117,7 +120,10 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 			sprintf(tbuf, "demi periode longue: dper=%ld, ligne=%ld, passage=%ld\n",
 				difl, gnligne, dpz);
 			write(fer, tbuf, strlen(tbuf));
+			nblp++;
 		      }
+		    else
+		      gfnligne += difl;
 		  dpz = nligne ;
 		  if (sens==1)
 		    maxd = 0;
@@ -152,6 +158,7 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
     {
       printf("sortie sur dépassement: pfic: %ld filesz: %ld derligne: %d\n",
 	     positionfic, sifi, derpositionl);
+      printf("nbpz: %ld, nbcp: %ld, nblp: %ld, moyenne de periode: %ld, moyenne filtree: %ld\n", nbpz, nbcp, nblp, gnligne/nbpz, gfnligne/(nbpz-nblp-nbcp));
       return 0;
     }
   return 1;
