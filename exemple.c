@@ -1255,6 +1255,7 @@ void collectStreamingImmediate(UNIT * unit)
 
   /* Trigger disabled	*/
   status = ps5000aSetSimpleTrigger(unit->handle, 0, PS5000A_CHANNEL_A, 0, PS5000A_RISING, 0, 0);
+  status = ps5000aSetSimpleTrigger(unit->handle, 0, PS5000A_CHANNEL_B, 0, PS5000A_RISING, 0, 0);
 
   streamDataHandler(unit, 0);
 }
