@@ -5,8 +5,11 @@
  * pour estimer la sinusoide
  * ...
  ****************************************************************************/
-#define DATASZ 20000000
-
+#define DATASZ 1000000
+#define ULP 1500
+#define UCP 40
+#define LP 1060
+#define CP 1020
 
 
 #include <stdio.h> 
@@ -112,7 +115,7 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 		  sprintf(tbuf, "%ld,%ld,%ld,%hd,%d,%d,%d,%d,%hd\n",gnligne,nligne-dpz,
 			  positionfic+c-buff,sens,mind,maxd,d1,d2,data[0][nligne-1]);
 		  write(fo,tbuf,strlen(tbuf));
-		  if (difl < 40)
+		  if (difl < UCP)
 		    {
 		      sprintf(tbuf, "demi periode ultra courte: dper=%ld, ligne=%ld, passage=%ld\n",
 			      difl, gnligne, dpz);
@@ -120,7 +123,7 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 		      nbucp++;
 		    }
 		  else
-		  if (difl < 1020)
+		  if (difl < CP)
 		    {
 		      sprintf(tbuf, "demi periode courte: dper=%ld, ligne=%ld, passage=%ld\n",
 			      difl, gnligne, dpz);
@@ -128,7 +131,7 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 		      nbcp++;
 		    }
 		  else
-		    if (difl > 1500)
+		    if (difl > ULP)
 		      {
 			sprintf(tbuf, "demi periode ultra longue: dper=%ld, ligne=%ld, passage=%ld\n",
 				difl, gnligne, dpz);
@@ -136,7 +139,7 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 			nbulp++;
 		      }
 		  else
-		    if (difl > 1060)
+		    if (difl > LP)
 		      {
 			sprintf(tbuf, "demi periode longue: dper=%ld, ligne=%ld, passage=%ld\n",
 				difl, gnligne, dpz);
