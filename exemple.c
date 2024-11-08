@@ -1,7 +1,7 @@
 /*******************************************************************************
  *
  * Filename: exemple.c from ps5000aCon.c
- * gcc exemple.c -g -o exe -lm -lps5000a  -Wno-format -Wl,-s  -u,pthread_atfork -L/opt/picoscope/lib -I/opt/picoscope/include
+ * gcc exemple.c -g -o exe -lm -luuid -lps5000a  -Wno-format -Wl,-s  -u,pthread_atfork -L/opt/picoscope/lib -I/opt/picoscope/include
  *
  * Description:
  *   This is a console mode program that demonstrates how to use some of 
@@ -14,52 +14,15 @@
  *		PicoScope 5243A/B/D & 5443A/B/D
  *		PicoScope 5244A/B/D & 5444A/B/D
  *
- * Examples:
- *   Collect a block of samples immediately
- *   Collect a block of samples when a trigger event occurs
- *	 Collect a block of samples using Equivalent Time Sampling (ETS)
- *   Collect samples using a rapid block capture with trigger
- *   Collect a stream of data immediately
- *   Collect a stream of data when a trigger event occurs
- *   Set Signal Generator, using standard or custom signals
- *   Change timebase & voltage scales
- *   Display data in mV or ADC counts
- *	 Handle power source changes
- *
- *	To build this application:-
- *
- *		If Microsoft Visual Studio (including Express/Community Edition) is being used:
- *
- *			Select the solution configuration (Debug/Release) and platform (x86/x64)
- *			Ensure that the 32-/64-bit ps5000a.lib can be located
- *			Ensure that the ps5000aApi.h and PicoStatus.h files can be located
- *
- *		Otherwise:
- *
- *			 Set up a project for a 32-/64-bit console mode application
- *			 Add this file to the project
- *			 Add ps5000a.lib to the project (Microsoft C only)
- *			 Add ps5000aApi.h and PicoStatus.h to the project
- *			 Build the project
- *
  *  Linux platforms:
  *
- *		Ensure that the libps5000a driver package has been installed using the
  *		instructions from https://www.picotech.com/downloads/linux
- *
- *		Place this file in the same folder as the files from the linux-build-files
- *		folder. In a terminal window, use the following commands to build
- *		the ps5000aCon application:
- *
- *			./autogen.sh <ENTER>
- *			make <ENTER>
- *
  * Copyright (C) 2013-2018 Pico Technology Ltd. See LICENSE file for terms.
  *
  ******************************************************************************/
 
 #include <stdio.h>
-
+//#include <uuid/uuid.h>
 #include <sys/types.h>
 #include <string.h>
 #include <termios.h>
@@ -237,7 +200,8 @@ uint32_t		g_trigAt = 0;
 int16_t			g_overflow = 0;
 
 int8_t blockFile[20]  = "block.txt";
-int8_t streamFile[20] = "stream.txt";
+int8_t streamFile[100] = "stream.txt";
+#define BaseSFile "stream"
 
 typedef struct tBufferInfo
 {
@@ -600,11 +564,20 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
   while (retry);
   startts = GetTimeStamp();
   printf("Streaming data...Press a key to stop\n");
+    
+  sprintf(streamFile, "%s-%f.txt", BaseSFile, GetTimeStamp());
   fopen_s(&fp, streamFile, "w");
 
   if (fp != NULL)
     {
+      //uuid_t binuuid;
+      //uuid_generate_random(binuuid);
+      //char *uuid = malloc(38);
+      //uuid_unparse(binuuid, uuid);
+      //uuid[37] = 0;
+      //printf("%s\n", uuid);
       fprintf(fp,"Streaming Data Log       <ts positions>                                                           \n\n");
+      //fprintf(fp,"UUID:%s\n", uuid);
       fprintf(fp,"For each of the %d Channels, results shown are....\n",unit->channelCount);
       fprintf(fp,"ADC raw, conversion in mv: raw * range(A:%d,B:%d) / maxADCValue(%d)\n\n", unit->channelSettings[PS5000A_CHANNEL_A + j].range, unit->channelSettings[PS5000A_CHANNEL_B + j].range, unit->maxADCValue);
       for (j = 0; j < unit->channelCount; j++) 
@@ -616,7 +589,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
       fprintf(fp, "ADC_A,ADC_B\n");
     }
 	
-
+  printf("entête complète lancement de l'acquisition\n");
   totalSamples = 0;
 
   while (!_kbhit() && !g_autoStopped)
@@ -1488,8 +1461,8 @@ int32_t main(void)
     "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#";
   PICO_STATUS status = PICO_OK;
   UNIT allUnits[MAX_PICO_DEVICES];
-
-  printf("PicoScope 5000 Series (ps5000a) Driver Example Program\n");
+    
+  printf("PicoScope 5000 Series (ps5000a) from Driver Example Program\n");
   printf("\nEnumerating Units...\n");
 
   do
