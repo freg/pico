@@ -5,7 +5,7 @@
  * pour estimer la sinusoide
  * ...
  ****************************************************************************/
-#define DATASZ 200000
+#define DATASZ 20000000
 
 
 
@@ -41,7 +41,7 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
   
   static long positionfic = 0; //position dans le fichier lseek
   static long gnligne=0,nligne=0, dpz=0, dpcs=0, difl=0; // compteur, derniere position du zero, der changement de sens
-  static long nbpz=0, nblp=0, nbcp=0, gfnligne=0;
+  static long nbpz=0, nbulp=0, nblp=0, nbcp=0, gfnligne=0, nbucp=0;
   short ok=0,sens=0,lsens=0; // fin entete et sens de la courbe -1 decroit 1 croit
   static short entete = 0; // entente passee ou pas
   if (!buff) { buff =  calloc(DATASZ+1, sizeof(char)); printf("alloc\n"); }
@@ -76,6 +76,11 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 		  ok = 1;
 		  entete = 1;
 		}
+	      else
+		if (!strncmp(dl,"UUID:",5))
+		  {
+		    write(fer, dl, strlen(dl));
+		  }
 	      nligne = gnligne = 0;
 	      if (nligne > 50)
 		{
@@ -107,6 +112,14 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 		  sprintf(tbuf, "%ld,%ld,%ld,%hd,%d,%d,%d,%d,%hd\n",gnligne,nligne-dpz,
 			  positionfic+c-buff,sens,mind,maxd,d1,d2,data[0][nligne-1]);
 		  write(fo,tbuf,strlen(tbuf));
+		  if (difl < 40)
+		    {
+		      sprintf(tbuf, "demi periode ultra courte: dper=%ld, ligne=%ld, passage=%ld\n",
+			      difl, gnligne, dpz);
+		      write(fer, tbuf, strlen(tbuf));
+		      nbucp++;
+		    }
+		  else
 		  if (difl < 1020)
 		    {
 		      sprintf(tbuf, "demi periode courte: dper=%ld, ligne=%ld, passage=%ld\n",
@@ -114,6 +127,14 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 		      write(fer, tbuf, strlen(tbuf));
 		      nbcp++;
 		    }
+		  else
+		    if (difl > 1500)
+		      {
+			sprintf(tbuf, "demi periode ultra longue: dper=%ld, ligne=%ld, passage=%ld\n",
+				difl, gnligne, dpz);
+			write(fer, tbuf, strlen(tbuf));
+			nbulp++;
+		      }
 		  else
 		    if (difl > 1060)
 		      {
@@ -153,12 +174,18 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
   positionfic+=DATASZ;
   derpositionl = c-dl;
   dpz -= nligne;
-  printf("fin de passage... ligne:%ld, reste:%ld, decl:%d\n",gnligne,sifi-positionfic,derpositionl);
+  sprintf(buff, "fin de passage... ligne:%ld, reste:%ld, decl:%d\n",gnligne,sifi-positionfic,derpositionl);
+  printf(buff);
+  write(fer, buff, strlen(buff));
   if (positionfic>=sifi-derpositionl) // évite de boucler sur la dernière ligne
     {
-      printf("sortie sur dépassement: pfic: %ld filesz: %ld derligne: %d\n",
+      sprintf(buff, "sortie sur dépassement: pfic: %ld filesz: %ld derligne: %d\n",
 	     positionfic, sifi, derpositionl);
-      printf("nbpz: %ld, nbcp: %ld, nblp: %ld, moyenne de periode: %ld, moyenne filtree: %ld\n", nbpz, nbcp, nblp, gnligne/nbpz, gfnligne/(nbpz-nblp-nbcp));
+      printf(buff);
+      write(fer, buff, strlen(buff));
+      sprintf(buff, "nbpz: %ld, nbucp: %ld, nbcp: %ld, nbulp: %ld, nblp: %ld, moyenne de periode: %ld, moyenne filtree: %ld\n", nbpz, nbucp, nbcp, nbulp, nblp, gnligne/nbpz, gfnligne/(nbpz-nblp-nbcp));
+      printf(buff);
+      write(fer, buff, strlen(buff));      
       return 0;
     }
   return 1;
@@ -174,6 +201,22 @@ int main(int nba, char ** args, char ** env)
   long fdatasz ;
   double startts, endts;
   char tbuf[200];
+
+  if (nba>0)
+    {
+      for (int ia=1;ia<nba;ia++)
+	if (args[ia][0] == '-')
+	  {
+	    switch(args[ia][1])
+	      {
+	      case 'f': // nom de fichier
+		printf("fichier de données: %s\n",&args[ia][1]);
+		strcpy(nfiin,args[ia+1]);
+		break;
+	      }
+	  }
+    }
+  
   startts = GetTimeStamp();
   data[0] = (int16_t*) calloc(DATASZ, sizeof(int16_t));
   data[1] = (int16_t*) calloc(DATASZ, sizeof(int16_t));
