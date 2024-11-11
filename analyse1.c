@@ -197,8 +197,8 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 int main(int nba, char ** args, char ** env)
 {
   char nfiin[200] = "stream.txt" ;
-  char nfiout[200] = "ana1.txt" ;
-  char nfier[200] = "errana.txt" ;
+  char nfiout[200] = "ana." ;
+  char nfier[200] = "err." ;
   int fi,fo,fer;
   int16_t * data[2];
   long fdatasz ;
@@ -215,6 +215,8 @@ int main(int nba, char ** args, char ** env)
 	      case 'f': // nom de fichier
 		printf("fichier de données: %s\n",&args[ia][1]);
 		strcpy(nfiin,args[ia+1]);
+		strcat(nfiout, nfiin);
+		strcat(nfier, nfiin);
 		break;
 	      }
 	  }
