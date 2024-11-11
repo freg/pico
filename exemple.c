@@ -525,7 +525,7 @@ void streamDataHandler(UNIT * unit, uint32_t preTrigger)
   downsampleRatio = 1;
   //timeUnits = PS5000A_US;
   timeUnits = PS5000A_NS;
-  sampleInterval = 50;
+  sampleInterval = 100;
   ratioMode = PS5000A_RATIO_MODE_NONE;
   preTrigger = 0;
   postTrigger = 1000000;
