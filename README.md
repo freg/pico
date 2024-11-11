@@ -19,3 +19,8 @@ pseudo algo:
 3: seuil/elastique pour identifier les periodes courte et longue (actuellement 1020/1060)
 4: seuil/elastique pour identifier les periodes ultra courte et ultra longue (actuellement 40/1500)
 5: seuil/elastique pour identifier les sauts de croissance dans les donnees (actuellement 450)
+
+# TODO
+
+1: mettre en paramètres les seuils et le taux d'échantillonnage
+2: projeter une courbe des demi périodes et des erreurs
