@@ -6,10 +6,10 @@
  * ...
  ****************************************************************************/
 #define DATASZ 1000000
-#define ULP 1500
+#define ULP 800
 #define UCP 40
-#define LP 1060
-#define CP 1020
+#define LP 600
+#define CP 400
 
 
 #include <stdio.h> 
@@ -177,7 +177,8 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
   positionfic+=DATASZ;
   derpositionl = c-dl;
   dpz -= nligne;
-  sprintf(buff, "fin de passage... ligne:%ld, reste:%ld, decl:%d\n",gnligne,sifi-positionfic,derpositionl);
+  sprintf(buff, "fin de passage... ligne:%ld, ligne filtree:%ld, taux: %f, reste:%ld, decl:%d\n",
+	  gnligne,gfnligne,((double)gfnligne/(double)gnligne)*100.0, sifi-positionfic,derpositionl);
   printf(buff);
   write(fer, buff, strlen(buff));
   if (positionfic>=sifi-derpositionl) // évite de boucler sur la dernière ligne
