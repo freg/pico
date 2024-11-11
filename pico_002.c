@@ -622,7 +622,7 @@ void StreamingCallback(int16_t handle,
 			 void * pParameter
 			 )
 {
-  //printf("streamingcallback %d\n", noOfSamples);
+  printf("streamingcallback %d\n", noOfSamples);
   // used for streaming
   g_sampleCount = noOfSamples;
   g_startIndex = startIndex;
@@ -655,44 +655,38 @@ void acq_continue(uint interval, uint taille, char*fichier)
    uint totalsamples = 0;
    uint triggeredAt = 0;
    FILE *fi;
-   double debut=0, fin, result, sec, hz ;
+   double debut=0, fin, result, sec, hz = 0;
+
    setDefaults(&_unit);
-   
    printf("Collect streaming...\n");
    printf("Data is written to disk file (%s)\n", fichier);
-   printf("Press a key to start\n");
-   while(!getchar())
-     {
-       fflush(stdin);
-       sleep(1);
-     }
-   fflush(stdin);
-   /* Trigger disabled	
-   * SetTrigger(null, 0, null, 0, null, null, 0, 0, 0);
-   */
+   
+   /* Trigger disabled	*/
+   //SetTrigger(NULL, 0, NULL, 0, NULL, NULL, 0, 0, 0);
+   /**/
  
 
- status = ps5000aMemorySegments(_handle, 2, &nbr_ech);
- 
+ status = ps5000aMemorySegments(_unit.handle, 2, &nbr_ech);
+ ps5000aStop(_unit.handle);
  for (int i = 0; i < g_channelCount; i++) // create data buffers
    {
      Buffer[i] = (int16_t*) calloc(taille, sizeof(int16_t));
      Pinned[i] = (short*)calloc(g_channelCount, sizeof(short));
      status = ps5000aSetDataBuffer(_unit.handle, (PS5000A_CHANNEL)PS5000A_CHANNEL_A+i,
-				   Buffer[i], (int)sampleCount, 0, 0);
+				   Buffer[i], (int)taille, 0, 0);
      printf("status SetDataBuffer: %d\n",status);
    }
  if (status != PICO_OK)
    return ;
  uint32_t sampleRatio = 1; 
- if (!sampleInterval) sampleInterval=4000;
+ if (!sampleInterval) sampleInterval=200;
  status = ps5000aRunStreaming(
 			      _unit.handle, 
 			      &sampleInterval, 
 			      PS5000A_NS,
 			      preTrigger, 
 			      1000000 - preTrigger, 
-			      TRUE,
+			      FALSE,
 			      sampleRatio,
 			      PS5000A_RATIO_MODE_NONE,
 			      (int)sampleCount);
@@ -708,14 +702,16 @@ void acq_continue(uint interval, uint taille, char*fichier)
  //WriteLine(status);
  printf("fichier: %s\n",fichier);
  fi = fopen(fichier, "w");
+ /* ajouter l'entete de conf adc (+-10v)...*/
  fprintf(fi, "ADC_A,ADC_B\n");
  char ch=0;
  WriteLine("Press ESC key to stop");
  uint32_t cpt = 0;
+ BOOL deja = FALSE; // flag de getData 
  while(TRUE)
    {
      //printf("ch: %c boucle start index: %d\n",ch, g_startIndex);
-     status = ps5000aGetValuesAsync(
+     /*status = ps5000aGetValuesAsync(
 				    _unit.handle,
 				    g_startIndex,
 				    sampleInterval,
@@ -742,30 +738,40 @@ void acq_continue(uint interval, uint taille, char*fichier)
        {
 	 printf("status getvalueasync: %d\n", status);
 	 break;
-       }
-     status = ps5000aGetStreamingLatestValues(_unit.handle, StreamingCallback, NULL);
-     
-     if (status != PICO_OK)
+       }*/
+     if (!deja)
        {
-	 printf("status getstreaminglatest: %d\n", status);
-	 break;
+	 status = ps5000aGetStreamingLatestValues(_unit.handle, StreamingCallback, NULL);
+     
+	 if (status != PICO_OK)
+	   {
+	     printf("status getstreaminglatest: %d\n", status);
+	     break;
+	   }
+	 deja = TRUE;
        }
      if (g_ready && g_sampleCount > 0) /* can be ready and have no data, if autoStop has fired */
        {
+	 deja = FALSE;
 	 if (!debut)
-	   debut = GetTimeStamp();
+	   {
+	     printf("DEBUT\n");
+	     debut = GetTimeStamp();
+	   }
 	 //printf("data ready sampleCount: %d\n", g_sampleCount);
 	 if (g_trig > 0)
 	   triggeredAt = totalsamples + g_trigAt;
 	 totalsamples += (uint)g_sampleCount;
 	 for(int i=g_startIndex; i<(int) (g_startIndex + g_sampleCount); i++, cpt++)
-	   fprintf(fi, "%6d,%6d\n",
-		 adc_to_mv(Buffer[0][i],
-			   _unit.channelSettings[PS5000A_CHANNEL_A].range,
-			   &_unit),
+	   fprintf(fi, "%d,%d\n", Buffer[0][i], Buffer[1][i]);
+	 /*fprintf(fi, "%d,%d,%d,%d\n", Buffer[0][i], Buffer[1][i],
+		   adc_to_mv(Buffer[0][i],
+				_unit.channelSettings[PS5000A_CHANNEL_A].range,
+			     &_unit),
 		   adc_to_mv(Buffer[1][i],
-			   _unit.channelSettings[PS5000A_CHANNEL_B].range,
-			   &_unit) );	 
+				_unit.channelSettings[PS5000A_CHANNEL_B].range,
+			     &_unit)
+			     );*/
        }
      ch=getchar();
      if (ch == 27)
@@ -775,6 +781,8 @@ void acq_continue(uint interval, uint taille, char*fichier)
  fin = GetTimeStamp();
  result = fin - debut ;
  sec = result / 1e9;
+ if (sec)
+   hz = cpt/sec;
  hz = sec ? cpt/sec:1;
  printf("lecture de %d:%d valeurs deb: %f fin: %f en %f nano secondes %f s %f Hz %f Mhz\n",
 	totalsamples, cpt, debut, fin, result, sec, hz, hz/1e6);
