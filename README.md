@@ -24,3 +24,5 @@ pseudo algo:
 
 1: mettre en paramètres les seuils et le taux d'échantillonnage
 2: projeter une courbe des demi périodes et des erreurs
+3: fichier des demi periodes et analyse/courbe
+4: automate de réglage des seuils sur un taux de rejet donné
