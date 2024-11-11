@@ -186,7 +186,8 @@ int passage_a_zero(int fi, int fo, int fer, int16_t**data, long sifi)
 	     positionfic, sifi, derpositionl);
       printf(buff);
       write(fer, buff, strlen(buff));
-      sprintf(buff, "nbpz: %ld, nbucp: %ld, nbcp: %ld, nbulp: %ld, nblp: %ld, moyenne de periode: %ld, moyenne filtree: %ld\n", nbpz, nbucp, nbcp, nbulp, nblp, gnligne/nbpz, gfnligne/(nbpz-nblp-nbcp));
+      sprintf(buff, "nbpz: %ld, nbucp: %ld, nbcp: %ld, nbulp: %ld, nblp: %ld, nb periodes: %ld, nbperiodes filtrees: %ld, moyenne de periode: %ld, moyenne filtree: %ld\n",
+	      nbpz, nbucp, nbcp, nbulp, nblp, gnligne, gfnligne, gnligne/nbpz, gfnligne/(nbpz-nblp-nbcp));
       printf(buff);
       write(fer, buff, strlen(buff));      
       return 0;
