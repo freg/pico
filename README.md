@@ -9,7 +9,7 @@ pico_002.c version c du code csharp... pas fameux
 exemple.c seconde version presque maitrisee issue de l'exemple fourni pas la lib... en cours d'amelioration
 
 ## compilation
-gcc <source>.c -g -o <bin exe>  -lm -lps5000a  -Wno-format -Wl,-s  -u,pthread_atfork -L/opt/picoscope/lib -I/opt/picoscope/include
+gcc source.c -g -o bin-exe  -lm -lps5000a  -Wno-format -Wl,-s  -u,pthread_atfork -L/opt/picoscope/lib -I/opt/picoscope/include
 
 # analyse de qualité des données
 
